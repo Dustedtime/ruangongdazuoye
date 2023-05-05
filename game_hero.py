@@ -1,24 +1,73 @@
-from game_creature import Creature
+import pygame
+import sys
+import os
 
 
-class Hero(Creature):  # 角色类
-    def __init__(self, dictionary):
-        super().__init__(dictionary)
-        self.level = dictionary['level']  # 等级
-        self.max_health = dictionary['max_health']  # 最大生命值
-        self.shield = dictionary['shield']  # 盾牌
-        self.jewel = dictionary['jewel']  # 宝石
-        self.weapon = dictionary['weapon']  # 武器
-        self.bag = dictionary['bag']  # 背包
+ani=4
+ALPHA=(0,255,0)
 
-    def defense(self, status, kind):  # 防御，kind只有两种值：-1和1，-1表示取消防御，1表示开始防御
-        self.defence += kind * status * self.shield.defence  # 修改防御力
+class Hero(pygame.sprite.Sprite):
+    ani = 4
+    ALPHA = (0, 255, 0)
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.steps=5
+        self.movex=0
+        self.movey=0
+        self.frame=0
+        self.HP=100
+        self.ATK=10
+        self.DEF=10
+        self.images=[]
+        for i in range(1,17):
+            img=pygame.image.load(os.path.join('images','player'+str(i)+'.png')).convert()
+            img.convert_alpha()
+            img.set_colorkey(ALPHA)
+            self.images.append(img)
+            self.image=self.images[0]
+            self.rect=self.image.get_rect()
 
-    def stairs(self, game_map):  # 上下楼梯
-        pass
+    def control(self,event):
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_UP or event.key == pygame.K_w:
+                self.movey-=self.steps
+            if event.key == pygame.K_DOWN or event.key == pygame.K_s:
+                self.movey+=self.steps
+            if event.key == pygame.K_LEFT or event.key == pygame.K_a:
+                self.movex-=self.steps
+            if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
+                self.movex+=self.steps
 
-    def talk(self, npc):  # 与npc交谈
-        pass
+        if event.type == pygame.KEYUP:
+            if event.key == pygame.K_UP or event.key == pygame.K_w:
+                self.movey += self.steps
+            if event.key == pygame.K_DOWN or event.key == pygame.K_s:
+                self.movey -= self.steps
+            if event.key == pygame.K_LEFT or event.key == pygame.K_a:
+                self.movex += self.steps
+            if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
+                self.movex -= self.steps
 
-    def door(self, game_map):  # 开门
-        pass
+    def update(self,screen):
+        self.rect.x=self.rect.x+self.movex
+        self.rect.y = self.rect.y + self.movey
+        if self.movey<0:
+            self.frame+=1
+            if self.frame>3*ani:
+                self.frame=0
+            self.image=self.images[self.frame//ani+12]
+        if self.movey>0:
+            self.frame+=1
+            if self.frame>3*ani:
+                self.frame=0
+            self.image=self.images[self.frame//ani]
+        if self.movex<0:
+            self.frame+=1
+            if self.frame>3*ani:
+                self.frame=0
+            self.image=self.images[self.frame//ani+4]
+        if self.movex>0:
+            self.frame+=1
+            if self.frame>3*ani:
+                self.frame=0
+            self.image=self.images[self.frame//ani+8]
