@@ -3,16 +3,22 @@ from game_setting import Setting
 from game_page import Page
 
 
-def run_game():
+def run_game():  # 游戏主函数
     pygame.init()
-    setting = Setting()
-    page = Page()
-    screen = pygame.display.set_mode((setting.screen_width, setting.screen_height))
+    setting = Setting()  # 设置类实例化
+    screen = pygame.display.set_mode((1500, 800))  # 尝试创建窗口，以获取电脑屏幕分辨率
+    setting.init_size(screen)  # 根据电脑屏幕分辨率，更新屏幕大小
+    setting.music_init()  # 初始化游戏音量
+    del screen
+    screen = pygame.display.set_mode((setting.screen_width, setting.screen_height))  # 创建窗口
+    page = Page(setting)  # 页面类实例化
     pygame.display.set_caption("地宫类闯关游戏")
-    while True:
-        page.update_page(screen)
-        page.check_event()
-        pygame.display.update()
+    clock = pygame.time.Clock()
+    while True:  # 游戏主循环
+        clock.tick(60)
+        page.update_page(screen, setting)  # 更新页面
+        page.check_event(screen, setting)  # 检测事件
+        pygame.display.update()  # 屏幕刷新
 
 
 run_game()
