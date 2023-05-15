@@ -32,5 +32,9 @@
   "right": [0.625, 20],
   "top": [0.5, -15],
   "bottom": [0.5, 15],
-  "width": 0.05
+  "width": 0.05,
+  "left_max": 0.25,
+  "right_min": 1,
+  "top_max": 0,
+  "bottom_min": 1
 }
