@@ -6,11 +6,12 @@ import sys
 import pygame
 
 from game_hero import Hero
-from game_map import Map
+from game_maps import Map
 
 
 class Page:  # 定义页面类
-    def __init__(self, setting):
+    def __init__(self, setting, screen):
+        self.screen = screen
         self.hero = None
         self.monster = []
         self.npc = []
@@ -47,9 +48,11 @@ class Page:  # 定义页面类
                 path = ''
                 for directory_image in image[0]:
                     path = os.path.join(path, directory_image)
-                size = (setting.screen_width * image[2][0], setting.screen_height * image[2][1])
+                size = (setting.screen_width * image[2][0], setting.screen_height * image[2][1])  # 图像尺寸
                 picture = pygame.transform.scale(pygame.image.load(path), size)
+                # 图像左上角坐标
                 picture_left_top_pos = (setting.screen_width * image[1][0], setting.screen_height * image[1][1])
+                # 图像右下角坐标
                 picture_right_bottom_pos = (picture_left_top_pos[0] + size[0], picture_left_top_pos[1] + size[1])
                 self.images.append([picture, picture_left_top_pos, picture_right_bottom_pos])
         if os.path.exists(os.path.join(route_common, 'archival.json')):  # 先检测是否存在，然后读取存档数据并更新页面相关信息
@@ -94,51 +97,55 @@ class Page:  # 定义页面类
                     word_after_pos.center = (
                         word_after[2][0] * setting.screen_width, word_after[2][1] * setting.screen_height)
                     self.words_after.append([word_after_temp, word_after_pos])
-        if os.path.exists(os.path.join(route_special, 'floor.json')):
+        if os.path.exists(os.path.join(route_special, 'floor.json')):  # 先检测是否存在，然后读取地图数据并更新页面相关信息
             with open(os.path.join(route_special, 'floor.json'), 'r') as f:
                 dictionary = json.load(f)
                 dictionary_temp = dictionary.copy()
             for key in dictionary:
                 with open(os.path.join(route_special, 'floor' + str(dictionary[key]), 'map_data.json'), 'r') as f:
                     dictionary_temp.update(json.load(f))
-            self.game_map = Map(dictionary_temp, setting)
+            self.game_map = Map(dictionary_temp, setting.screen_width, setting.screen_height)
         pass  # 需完善角色、敌人等对象的更新
 
     def update_page_type(self, page_kind, setting):  # 更新页面编号
         self.page_kind = page_kind
         self.update_page_info(setting)  # 根据编号更新页面信息
 
-    def update_page(self, screen, setting):  # 刷新页面
+    def update_page(self, setting):  # 刷新页面
         for image in self.images:
-            screen.blit(image[0], image[1])
+            self.screen.blit(image[0], image[1])
         for word in self.words:
-            screen.blit(word[0], word[1])
+            self.screen.blit(word[0], word[1])
         if self.game_map:
-            x_change, y_change = self.hero.update(self.game_map.walls, setting.ani, self.game_map.wall_width)
+            x_change, y_change = self.hero.update(self.game_map, setting.ani)  # 更新人物位置
             if x_change or y_change:
-                self.game_map.update(x_change, y_change)
-            self.game_map.draw(screen)
-            self.hero.draw(screen)
+                self.game_map.update(x_change, y_change)  # 更新地图位置
+            self.game_map.draw(self.screen)  # 绘制地图
+            self.hero.draw(self.screen)  # 绘制人物
+            self.hero.status.draw(self.screen)  # 绘制人物状态栏
+            self.hero.bullets.update(x_change, y_change)  # 玩家发出的子弹位置的更新
+            pygame.sprite.groupcollide(self.hero.bullets, self.game_map.walls, True, False)
+            self.hero.bullets.draw(self.screen)  # 绘制玩家发出的子弹
         pass  # 需完善角色、敌人等对象的更新
 
-    def check_event(self, screen, setting):  # 监测事件
+    def check_event(self, setting):  # 监测事件
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
             elif event.type == pygame.MOUSEBUTTONDOWN:  # 鼠标按下
-                self.mouse_button_down_page(event, screen, setting)
+                self.mouse_button_down_page(event, setting)
             elif event.type == pygame.KEYDOWN:  # 键盘按键按下
-                self.key_down_page(event, screen, setting)
+                self.key_down_page(event, setting)
             elif event.type == pygame.KEYUP:  # 键盘按键松开
-                self.key_up_page(event, screen, setting)
+                self.key_up_page(event, setting)
             elif event.type == pygame.MOUSEMOTION:  # 鼠标移动
-                self.mouse_motion_page(event, screen, setting)
+                self.mouse_motion_page(event, setting)
             elif event.type == pygame.MOUSEBUTTONUP:  # 鼠标松开
-                self.mouse_button_up_page(event, screen, setting)
+                self.mouse_button_up_page(event, setting)
             pass  # 需完善其他事件
 
-    def mouse_button_down_page(self, event, screen, setting):  # 鼠标按下
+    def mouse_button_down_page(self, event, setting):  # 鼠标按下
         if self.page_kind == 0 and event.button == 1:
             self.mouse_button_down_page0(event, setting)
         elif self.page_kind == 1 and (event.button == 1 or event.button == 3):
@@ -179,7 +186,7 @@ class Page:  # 定义页面类
             num = (event.pos[1] - 90) // 200
             if event.button == 1:
                 if self.archival[num] != "New Game":  # 选中存档不为空，读取存档并进入游戏页面
-                    self.enter_game(self.archival[num], num, setting)
+                    self.enter_game(num, setting)
                 else:  # 选中存档为空，进入创建存档页面
                     self.current_archival[0] = num
                     self.update_page_type(2, setting)
@@ -190,11 +197,20 @@ class Page:  # 定义页面类
                         json.dump([[0.1, self.current_archival[1], [0.5, 0.55], [0, 0, 0]]], f)
                     self.update_page_type(3, setting)
 
-    def enter_game(self, archival, num, setting):  # 读取存档进入游戏
-        self.current_archival = [num, archival]  # 更新当前游戏中的存档信息
+    def enter_game(self, num, setting):  # 读取存档进入游戏
+        with open(os.path.join('page', self.archival[num], 'page4', 'floor.json'), 'r') as f:
+            dictionary = json.load(f)
+            dictionary_temp = dictionary.copy()
+        for key in dictionary:
+            with open(
+                    os.path.join('page', self.archival[num], 'page4', 'floor' + str(dictionary[key]), 'map_data.json'),
+                    'r') as f:
+                dictionary_temp.update(json.load(f))
+        self.game_map = Map(dictionary_temp, setting.screen_width, setting.screen_height)
+        self.current_archival = [num, self.archival[num]]  # 更新当前游戏中的存档信息
         with open(os.path.join('page', self.archival[num], 'page4', 'player', 'player_data.json'), 'r') as f:
             dictionary = json.load(f)
-        self.hero = Hero(dictionary, setting)
+        self.hero = Hero(dictionary, setting, setting.screen_width, setting.screen_height)
         self.update_page_type(4, setting)
 
     def mouse_button_down_page2(self, event, setting):  # 页面编号为2时鼠标按下
@@ -259,9 +275,7 @@ class Page:  # 定义页面类
         self.current_archival = [-1, '']
 
     def mouse_button_down_page4(self, event, setting):
-        if self.images[0][1][0] <= event.pos[0] < self.images[0][2][0] and self.images[0][1][1] <= event.pos[1] < \
-                self.images[0][2][1]:  # 返回主菜单
-            self.update_page_type(0, setting)
+        self.hero.bullets.add(self.hero.attack(1, setting.screen_height, event.pos))
 
     def mouse_button_down_page5(self, event, setting):  # 页面编号为5时鼠标按下
         if self.images[2][1][0] <= event.pos[0] < self.images[2][2][0] and self.images[2][1][1] <= event.pos[1] < \
@@ -330,7 +344,7 @@ class Page:  # 定义页面类
             self.images_after_num = 9
         self.images[2] = self.images_after[self.images_after_num]
 
-    def mouse_motion_page(self, event, screen, setting):  # 鼠标移动
+    def mouse_motion_page(self, event, setting):  # 鼠标移动
         if self.page_kind == 5:
             self.mouse_motion_page5(event, setting)
         pass  # 需完善其他页面
@@ -354,7 +368,7 @@ class Page:  # 定义页面类
             self.images[7][1] = (setting.volume[1] - width / 2, self.images[7][1][1])
             self.images[7][2] = (setting.volume[1] + width / 2, self.images[7][2][1])
 
-    def mouse_button_up_page(self, event, screen, setting):  # 鼠标松开
+    def mouse_button_up_page(self, event, setting):  # 鼠标松开
         if self.page_kind == 5 and event.button == 1:
             self.mouse_button_up_page5(setting)
         pass  # 需完善其他页面或操作
@@ -368,14 +382,14 @@ class Page:  # 定义页面类
             with open(os.path.join('page', 'page5', 'images.json'), "w") as f:  # 将最终效果保存至文件
                 json.dump(data, f)
 
-    def key_down_page(self, event, screen, setting):  # 键盘按下
+    def key_down_page(self, event, setting):  # 键盘按下
         if self.page_kind == 2:
-            self.key_down_page2(event, screen, setting)
+            self.key_down_page2(event, setting)
         elif self.page_kind == 4:
-            self.hero.control(event)
+            self.hero.control()
         pass  # 需完善其他页面
 
-    def key_down_page2(self, event, screen, setting):  # 页面编号为2时键盘按下
+    def key_down_page2(self, event, setting):  # 页面编号为2时键盘按下
         with open(os.path.join('page', 'page2', 'words.json'), "r") as f:  # 加载文字属性
             data = json.load(f)
         self.enter_archival_name(event, 0, data, setting)  # 从键盘读取新存档名字
@@ -448,9 +462,9 @@ class Page:  # 定义页面类
         words_pos.center = (data[0][2][0] * setting.screen_width, data[0][2][1] * setting.screen_height)
         self.words[num][1] = words_pos
 
-    def key_up_page(self, event, screen, setting):
+    def key_up_page(self, event, setting):  # 键盘按键松开
         if self.page_kind == 4:
-            self.key_up_page4(event)
+            self.key_up_page4()
 
-    def key_up_page4(self, event):
-        self.hero.control(event)
+    def key_up_page4(self):  # 页面类型为4时键盘按键松开
+        self.hero.control()

@@ -6,7 +6,7 @@ class Setting:
     def __init__(self):
         self.screen_width = 3000
         self.screen_height = 2000
-        self.ani = 4
+        self.ani = 10
         self.ALPHA = (0, 255, 0)
         self.volume = []
         self.music = 1

@@ -11,13 +11,13 @@ def run_game():  # 游戏主函数
     setting.music_init()  # 初始化游戏音量
     del screen
     screen = pygame.display.set_mode((setting.screen_width, setting.screen_height))  # 创建窗口
-    page = Page(setting)  # 页面类实例化
+    page = Page(setting, screen)  # 页面类实例化
     pygame.display.set_caption("地宫类闯关游戏")
     clock = pygame.time.Clock()
     while True:  # 游戏主循环
         clock.tick(60)
-        page.update_page(screen, setting)  # 更新页面
-        page.check_event(screen, setting)  # 检测事件
+        page.update_page(setting)  # 更新页面
+        page.check_event(setting)  # 检测事件
         pygame.display.update()  # 屏幕刷新
 
 
