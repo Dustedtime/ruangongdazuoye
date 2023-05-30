@@ -1,7 +1,6 @@
 import os
 
 import pygame
-from game_equipment import Bullet
 
 
 class Creature(pygame.sprite.Sprite):  # 生物类
@@ -17,15 +16,15 @@ class Creature(pygame.sprite.Sprite):  # 生物类
         self.movey = dictionary['movey']  # 纵坐标上接着要移动的距离
         self.size = (screen_height * dictionary['size'], screen_height * dictionary['size'])  # 图像大小
         self.frame = dictionary['frame']  # 图像帧坐标
-        self.direction = dictionary['direction']  # 角色朝向，0-8分别代表八个方向
         self.attack_time = dictionary['attack_time']  # 上次攻击的时间戳，结合后摇判断对象当前是否能攻击
         self.images = dictionary['images']  # 对象的图像
+        self.die = dictionary['die']
         self.load_image()
         self.image = self.images[self.frame]
         self.rect = self.image.get_rect()
         self.rect.topleft = (screen_width * dictionary['rect'][0], screen_height * dictionary['rect'][1])
 
-    def load_image(self):
+    def load_image(self):  # 加载要用到的图像
         num = len(self.images)
         for i in range(num):
             path = ''
@@ -33,14 +32,16 @@ class Creature(pygame.sprite.Sprite):  # 生物类
                 path = os.path.join(path, directory)
             self.images[i] = pygame.transform.scale(pygame.image.load(path), self.size)
 
-    def attacked(self, bullet):  # 被攻击，需要用到子弹对象
-        self.health -= (bullet.strength - self.defence + abs(bullet.strength - self.defence)) // 2  # 计算被攻击者受到攻击后剩余生命值
+    def attacked(self, attack):  # 被攻击，需要用到子弹对象
+        self.health -= (attack.strength - self.defence + abs(attack.strength - self.defence)) // 2  # 计算被攻击者受到攻击后剩余生命值
         if self.health <= 0:  # 死亡
-            pass
+            self.die = 1
 
-    def attack(self, kind, screen_height, pos):  # 根据使用的武器和攻击者属性返回实例化子弹对象
-        bullet = Bullet(self.rect, pos, 1, kind, screen_height)
-        return bullet
-        # if pygame.time.get_ticks() - self.attack_time >= weapon.backshake:  # 判断是否仍处于后摇阶段
-        #   self.attack_time = pygame.time.get_ticks()  # 更新最新攻击时间
-        #  return Bullet(self.position, self.direction, self.strength, weapon.kind)
+    # 根据使用的武器和攻击者属性返回实例化子弹对象
+    # monster_rect:发动攻击的怪物位置
+    # hero_pos:英雄的位置，用于怪物攻击自动瞄准
+    # strength:攻击力
+    # kind:子弹类型
+    # screen_height:屏幕高度，决定子弹大小
+    def attack(self, hero_pos, screen_height):  # 攻击
+        pass

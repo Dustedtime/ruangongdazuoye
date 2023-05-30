@@ -19,7 +19,6 @@ class Map:  # 游戏地图类
         self.top_max = dictionary['top_max'] * screen_height
         self.bottom_min = dictionary['bottom_min'] * screen_height
         self.walls = pygame.sprite.Group()  # 建立墙精灵组
-        self.floors = pygame.sprite.Group()
         self.doors = pygame.sprite.Group()
         self.stairs = pygame.sprite.Group()
         self.init_layout()  # 根据地图布局初始化地图
@@ -30,6 +29,7 @@ class Map:  # 游戏地图类
                 if self.layout_data[i][j] == 1:
                     wall = Wall((self.left + self.wall_width * j, self.top + self.wall_width * i),
                                 (self.wall_width, self.wall_width))
+                    # noinspection PyTypeChecker
                     self.walls.add(wall)
 
     def update(self, x, y):  # 更新场景中除角色外所有对象坐标

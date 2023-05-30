@@ -1,10 +1,252 @@
+import random
+
 from game_creature import Creature
 
+import pygame
 
-class Monster(Creature):  # 怪物类
-    def __init__(self, dictionary):
-        super().__init__(dictionary)
+from game_equipment import Bullet
+
+
+class Monster(Creature):  # 定义怪物类
+    def __init__(self, dictionary, screen_width, screen_height):
+        Creature.__init__(self, dictionary, screen_width, screen_height)  # 调用父类初始化
+        self.move_time = 0  # 怪物上次更新移动方向的时间
+        self.move_time_gap = dictionary['move_time_gap']  # 怪物移动方向更新的时间
+        self.backshake = dictionary['backshake']  # 怪物攻击后摇
+        self.chasing = 0  # 怪物是否追逐角色
+        self.withdraw_speed = dictionary['withdraw_speed'] * screen_height  # 怪物撤退速度
+        self.attacked_sword = dictionary['attacked_sword']  # 判断怪物是否被剑气击中过，用来防止怪物被一个剑气重复击中
         self.kind = dictionary['kind']  # 怪物种类
+        self.weapon_kind = dictionary['weapon_kind']  # 怪物武器种类
+        self.weapon_num = dictionary['weapon_num']  # 怪物武器编号
+        self.rect_temp = [self.rect.x, self.rect.y]  # 怪物移动过程中位置的更新，使用临时列表存储更为精确的坐标(rect会自动约)
+        self.range_max = dictionary['follow_range_max']  # 记录怪物跟踪范围上限
+        self.range_middle = dictionary['follow_range_middle']  # 记录怪物跟踪静止范围
+        self.range_min = dictionary['follow_range_min']  # 记录怪物跟踪范围下限
+        self.bullets = pygame.sprite.Group()
 
-    def patrol(self, game_map):  # 怪物巡逻
-        pass
+    def draw(self, screen):  # 更新怪物图像
+        screen.blit(self.image, self.rect)
+
+    def update(self, x, y, game_map, ani, hero, screen_height, monster_bullets, monsters):  # 更新怪物位置，参数x和y为地图偏移量
+        self.move(hero.rect)
+        self.collide_monster(monsters)  # 怪物之间的碰撞检测，防止怪物完全重叠
+        # 使用临时列表更新更为准确的坐标
+        self.rect_temp[0] += x + self.movex
+        self.rect_temp[1] += y + self.movey
+        self.rect.x = self.rect_temp[0]
+        self.rect.y = self.rect_temp[1]
+        # 记录坐标修正前的坐标
+        x_temp = self.rect.x
+        y_temp = self.rect.y
+        walls = pygame.sprite.spritecollide(self, game_map.walls, False)
+        if self.movey < 0:  # 怪物拥有向上速度
+            self.frame += 1  # 调节怪物图像所在帧
+            if self.frame >= 4 * ani:
+                self.frame = 0
+            self.image = self.images[self.frame // ani + 12]
+            if self.movex == 0:  # 怪物没有横向速度
+                for wall in walls:  # 进行精灵碰撞检测，如有碰撞则修正坐标
+                    if wall:
+                        self.rect.y = wall.rect.y + game_map.wall_width
+                        break
+            elif self.movex < 0:  # 怪物拥有向左速度
+                self.image = self.images[self.frame // ani + 4]
+                # 怪物斜向移动时，碰撞情况有多种，须分开讨论
+                if len(walls) == 1:  # 仅与一面墙发生碰撞
+                    if self.rect.x - walls[0].rect.x < self.rect.y - walls[0].rect.y:
+                        self.rect.y = walls[0].rect.y + game_map.wall_width
+                    elif self.rect.x - walls[0].rect.x > self.rect.y - walls[0].rect.y:
+                        self.rect.x = walls[0].rect.x + game_map.wall_width
+                    else:
+                        self.rect.y = walls[0].rect.y + game_map.wall_width
+                        self.rect.x = walls[0].rect.x + game_map.wall_width
+                elif len(walls) == 2:  # 与两面墙发生碰撞
+                    if walls[0].rect.x == walls[1].rect.x:
+                        self.rect.x = walls[0].rect.x + game_map.wall_width
+                    else:
+                        self.rect.y = walls[0].rect.y + game_map.wall_width
+                elif len(walls) == 3:  # 与三面墙发生碰撞
+                    self.rect.x = (walls[0].rect.x + walls[1].rect.x + walls[2].rect.x + game_map.wall_width * 2) // 3
+                    self.rect.y = (walls[0].rect.y + walls[1].rect.y + walls[2].rect.y + game_map.wall_width * 2) // 3
+            else:  # 怪物拥有向右速度
+                self.image = self.images[self.frame // ani + 8]
+                if len(walls) == 1:  # 仅与一面墙发生碰撞
+                    if self.rect.x - walls[0].rect.x < walls[0].rect.y - self.rect.y:
+                        self.rect.x = walls[0].rect.x - game_map.wall_width
+                    elif self.rect.x - walls[0].rect.x > walls[0].rect.y - self.rect.y:
+                        self.rect.y = walls[0].rect.y + game_map.wall_width
+                    else:
+                        self.rect.y = walls[0].rect.y + game_map.wall_width
+                        self.rect.x = walls[0].rect.x - game_map.wall_width
+                elif len(walls) == 2:  # 与两面墙发生碰撞
+                    if walls[0].rect.x == walls[1].rect.x:
+                        self.rect.x = walls[0].rect.x - game_map.wall_width
+                    else:
+                        self.rect.y = walls[0].rect.y + game_map.wall_width
+                elif len(walls) == 3:  # 与三面墙发生碰撞
+                    self.rect.x = (walls[0].rect.x + walls[1].rect.x + walls[2].rect.x - game_map.wall_width * 2) // 3
+                    self.rect.y = (walls[0].rect.y + walls[1].rect.y + walls[2].rect.y + game_map.wall_width * 2) // 3
+        # 下面情况与上面类似，不再注释
+        elif self.movey > 0:
+            self.frame += 1
+            if self.frame >= 4 * ani:
+                self.frame = 0
+            self.image = self.images[self.frame // ani]
+            if self.movex == 0:
+                for wall in pygame.sprite.spritecollide(self, game_map.walls, False):
+                    if wall:
+                        self.rect.y = wall.rect.y - game_map.wall_width
+                        break
+            elif self.movex < 0:
+                self.image = self.images[self.frame // ani + 4]
+                if len(walls) == 1:
+                    if self.rect.x - walls[0].rect.x < walls[0].rect.y - self.rect.y:
+                        self.rect.y = walls[0].rect.y - game_map.wall_width
+                    elif self.rect.x - walls[0].rect.x > walls[0].rect.y - self.rect.y:
+                        self.rect.x = walls[0].rect.x + game_map.wall_width
+                    else:
+                        self.rect.y = walls[0].rect.y - game_map.wall_width
+                        self.rect.x = walls[0].rect.x + game_map.wall_width
+                elif len(walls) == 2:
+                    if walls[0].rect.x == walls[1].rect.x:
+                        self.rect.x = walls[0].rect.x + game_map.wall_width
+                    else:
+                        self.rect.y = walls[0].rect.y - game_map.wall_width
+                elif len(walls) == 3:
+                    self.rect.x = (walls[0].rect.x + walls[1].rect.x + walls[2].rect.x + game_map.wall_width * 2) // 3
+                    self.rect.y = (walls[0].rect.y + walls[1].rect.y + walls[2].rect.y - game_map.wall_width * 2) // 3
+            else:
+                self.image = self.images[self.frame // ani + 8]
+                if len(walls) == 1:
+                    if self.rect.x - walls[0].rect.x < self.rect.y - walls[0].rect.y:
+                        self.rect.x = walls[0].rect.x - game_map.wall_width
+                    elif self.rect.x - walls[0].rect.x > self.rect.y - walls[0].rect.y:
+                        self.rect.y = walls[0].rect.y - game_map.wall_width
+                    else:
+                        self.rect.y = walls[0].rect.y - game_map.wall_width
+                        self.rect.x = walls[0].rect.x - game_map.wall_width
+                elif len(walls) == 2:
+                    if walls[0].rect.x == walls[1].rect.x:
+                        self.rect.x = walls[0].rect.x - game_map.wall_width
+                    else:
+                        self.rect.y = walls[0].rect.y - game_map.wall_width
+                elif len(walls) == 3:
+                    self.rect.x = (walls[0].rect.x + walls[1].rect.x + walls[2].rect.x - game_map.wall_width * 2) // 3
+                    self.rect.y = (walls[0].rect.y + walls[1].rect.y + walls[2].rect.y - game_map.wall_width * 2) // 3
+        else:
+            if self.movex < 0:
+                self.frame += 1
+                if self.frame >= 4 * ani:
+                    self.frame = 0
+                self.image = self.images[self.frame // ani + 4]
+                for wall in pygame.sprite.spritecollide(self, game_map.walls, False):
+                    if wall:
+                        self.rect.x = wall.rect.x + game_map.wall_width
+                        break
+            elif self.movex > 0:
+                self.frame += 1
+                if self.frame >= 4 * ani:
+                    self.frame = 0
+                self.image = self.images[self.frame // ani + 8]
+                for wall in pygame.sprite.spritecollide(self, game_map.walls, False):
+                    if wall:
+                        self.rect.x = wall.rect.x - game_map.wall_width
+                        break
+        # 更新临时坐标列表和怪物移动方向
+        if self.rect.x != x_temp:
+            self.rect_temp[0] += self.rect.x - x_temp
+            self.movex = -self.movex
+        if self.rect.y != y_temp:
+            self.rect_temp[1] += self.rect.y - y_temp
+            self.movey = -self.movey
+        if self.chasing:  # 怪物攻击
+            time_now = pygame.time.get_ticks()
+            if time_now - self.attack_time >= self.backshake:
+                self.attack_time = time_now
+                monster_bullets.add(self.attack((hero.rect.centerx, hero.rect.centery), screen_height))
+        self.collide_attacked(hero.bullets, hero.sword_attack)  # 子弹碰撞检测
+
+    def collide_monster(self, monsters):  # 怪物之间的碰撞检测，防止怪物完全叠在一起
+        for monster in pygame.sprite.spritecollide(self, monsters, False):
+            if monster != self:
+                if (monster.rect.centerx - self.rect.centerx) * self.movex > 0:
+                    self.movex = 0
+                if (monster.rect.centery - self.rect.centery) * self.movey > 0:
+                    self.movey = 0
+
+    def collide_attacked(self, bullets, sword_attack):  # 子弹碰撞检测
+        # 与英雄子弹的碰撞检测
+        for bullet in pygame.sprite.spritecollide(self, bullets, False):
+            if pygame.sprite.collide_mask(bullet, self):
+                self.attacked(bullet)  # 怪物受到攻击效果
+                bullets.remove(bullet)
+                if self.health <= 0:
+                    self.kill()
+                    return
+        # 与英雄剑气的碰撞检测
+        for attack in pygame.sprite.spritecollide(self, sword_attack, False):
+            if pygame.sprite.collide_mask(attack, self):
+                if not self.attacked_sword:
+                    self.attacked(attack)  # 怪物受到攻击效果
+                    self.attacked_sword = 1
+                if self.health <= 0:
+                    self.kill()
+                    return
+
+    def move(self, hero_rect):  # 怪物移动
+        # 怪物与角色的距离，判断是否进行跟随
+        distance = (abs(self.rect.centerx - hero_rect.centerx)) ** 2 + (abs(self.rect.centery - hero_rect.centery)) ** 2
+        if distance <= self.range_min:
+            self.chasing = 3
+        elif distance <= self.range_middle:
+            self.chasing = 2
+        elif distance <= self.range_max:
+            self.chasing = 1
+        else:
+            self.chasing = 0
+        if self.chasing:  # 怪物跟随角色
+            self.follow(hero_rect)
+            return
+        time_now = pygame.time.get_ticks()
+        if time_now - self.move_time < self.move_time_gap:
+            return
+        else:  # 未注意到角色，随机移动
+            self.move_time = time_now
+            self.movex = random.uniform(-self.speed, self.speed)
+            self.movey = random.uniform(-self.speed, self.speed)
+
+    def follow(self, hero_rect):  # 怪物发现角色后的移动
+        hero_x, hero_y = hero_rect.centerx, hero_rect.centery
+        monster_x, monster_y = self.rect.centerx, self.rect.centery
+        if self.chasing == 1:  # 追逐
+            if monster_x + self.speed <= hero_x:
+                self.movex = self.speed
+            elif monster_x - self.speed >= hero_x:
+                self.movex = -self.speed
+            else:
+                self.movex = hero_x - monster_x
+            if monster_y + self.speed <= hero_y:
+                self.movey = self.speed
+            elif monster_y - self.speed >= hero_y:
+                self.movey = -self.speed
+            else:
+                self.movey = hero_y - monster_y
+        elif self.chasing == 2:  # 站定攻击
+            self.movex = 0
+            self.movey = 0
+        else:  # 与角色拉开距离（远战敌人警戒距离较大，近战警戒距离小）
+            if monster_x <= hero_x:
+                self.movex = -self.withdraw_speed
+            else:
+                self.movex = self.withdraw_speed
+            if monster_y <= hero_y:
+                self.movey = -self.withdraw_speed
+            else:
+                self.movey = self.withdraw_speed
+
+    def attack(self, hero_pos, screen_height):
+        if self.weapon_kind == 1:
+            pass
+        elif self.weapon_kind == 2:
+            return Bullet(self.rect, hero_pos, self.strength, self.weapon_num, screen_height)

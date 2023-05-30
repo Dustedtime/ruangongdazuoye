@@ -16,8 +16,8 @@ def run_game():  # 游戏主函数
     clock = pygame.time.Clock()
     while True:  # 游戏主循环
         clock.tick(60)
-        page.update_page(setting)  # 更新页面
-        page.check_event(setting)  # 检测事件
+        page.update_page()  # 更新页面
+        page.check_event()  # 检测事件
         pygame.display.update()  # 屏幕刷新
 
 
