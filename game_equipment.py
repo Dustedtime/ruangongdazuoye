@@ -24,7 +24,7 @@ class Bullet(pygame.sprite.Sprite):
         self.load_direction(pos, rect)
 
     def load_image(self, rect, screen_height):  # 根据种类读取文档信息获取子弹图像
-        path = os.path.join('image', 'page4', 'bullet', str(self.kind), str(self.kind) + '.bmp')
+        path = os.path.join('image', 'page4', 'bullet', str(self.kind) + '.bmp')
         image = pygame.image.load(path)
         file = os.path.join('page', 'page4', 'bullet', str(self.kind) + '.json')
         with open(file, 'r') as f:
@@ -114,6 +114,8 @@ class Weapon:
         self.num = num  # 编号
         self.backshake = 0  # 武器后摇时间
         self.choose = 0  # 帧数定位
+        self.sell_price = 0  # 出售价格
+        self.buy_price = 0  # 购买价格
         self.images = []
         self.rects = []
         self.load_data(rect, width)
@@ -126,6 +128,8 @@ class Weapon:
             data = json.load(f)
         self.strength = data['strength']
         self.backshake = data['backshake']
+        self.sell_price = data['sell_price']
+        self.buy_price = data['buy_price']
         for image in data["image"]:  # 加载图片
             path = ''
             for directory in image[0]:

@@ -2,17 +2,19 @@ import json
 import os
 
 
-class Setting:
-    def __init__(self):
+class Setting:  # 游戏设置类
+    def __init__(self, screen):
         self.screen_width = 3000
         self.screen_height = 2000
         self.ani = 10
         self.ALPHA = (0, 255, 0)
-        self.volume = []
+        self.volume = []  # 游戏音量，第一个元素为音量最小值代表的横坐标，第二个元素为当前音量代表的横坐标，两者相除即得当前真正音量数值
         self.music = 1
         self.sound_effect = 1
         self.volume_hold = 0
         self.bag_space = 30
+        self.init_size(screen)
+        self.music_init()
 
     def init_size(self, screen):
         self.screen_width = screen.get_width()

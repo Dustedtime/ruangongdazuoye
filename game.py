@@ -5,8 +5,8 @@ from game_page import Page
 
 def run_game():  # 游戏主函数
     pygame.init()
-    setting = Setting()  # 设置类实例化
     screen = pygame.display.set_mode((1500, 800))  # 尝试创建窗口，以获取电脑屏幕分辨率
+    setting = Setting(screen)  # 设置类实例化
     setting.init_size(screen)  # 根据电脑屏幕分辨率，更新屏幕大小
     setting.music_init()  # 初始化游戏音量
     del screen
