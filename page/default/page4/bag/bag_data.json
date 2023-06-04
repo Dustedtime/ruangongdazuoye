@@ -1,7 +1,11 @@
 {
-  "selecting": 0,
-  "equip_wear": 0,
-  "things": [[1, 1, 1], [1, 2, 1]],
+  "things": [[1, 1, 1], [], [], [], [], [], [], [], [], [], [], [], [1, 2, 1], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []],
   "item_edge": 5,
-  "item_width": 44
+  "item_width": 49,
+  "equip_wear": [0, -1],
+  "equip_image": ["image", "page4", "bag", "equipping.bmp"],
+  "selecting": -1,
+  "selecting_image": ["image", "page4", "bag", "edge.bmp"],
+  "background": [["image", "page4", "bag", "background.bmp"], [0.425, 0.1], [0.4, 0.8]],
+  "show_image": [[0.625, 0.2], 0.3]
 }
