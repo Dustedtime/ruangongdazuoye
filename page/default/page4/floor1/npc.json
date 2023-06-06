@@ -1,0 +1,28 @@
+[
+  {
+    "size": 0.05,
+    "rect": [0.45, 0.55],
+    "image":["image", "page4", "npc", "1", "npc1.bmp"],
+    "kind": 1,
+    "status": 0,
+    "status_len": 3,
+    "font_height": 0.02,
+    "font_gap": 0.03,
+    "color": [0, 0, 0],
+    "backshake": 500,
+    "words_tip": "!"
+  },
+  {
+    "size": 0.05,
+    "rect": [0.45, 0.85],
+    "image":["image", "page4", "npc", "1", "npc1.bmp"],
+    "kind": 1,
+    "status": 0,
+    "status_len": 3,
+    "font_height": 0.02,
+    "font_gap": 0.03,
+    "color": [0, 0, 0],
+    "backshake": 500,
+    "words_tip": "!"
+  }
+]
