@@ -17,7 +17,7 @@ class Monster(Creature):  # 定义怪物类
         self.flying = dictionary['flying']  # 怪物是否属于飞行类，用于判断怪物站定时是否需要继续刷新帧率，以维持飞行状态
         self.withdraw_speed = dictionary['withdraw_speed'] * screen_height  # 怪物撤退速度
         self.attacked_sword = dictionary['attacked_sword']  # 判断怪物是否被剑气击中过，用来防止怪物被一个剑气重复击中
-        self.kind = dictionary['kind']  # 怪物种类
+        self.kind = dictionary['kind']  # 怪物种类，用于辅助保存怪物数据
         self.weapon_kind = dictionary['weapon_kind']  # 怪物武器种类
         self.weapon_num = dictionary['weapon_num']  # 怪物武器编号
         self.rect_temp = [self.rect.x, self.rect.y]  # 怪物移动过程中位置的更新，使用临时列表存储更为精确的坐标(rect会自动约)
@@ -266,4 +266,11 @@ class Monster(Creature):  # 定义怪物类
         else:
             harm.add_harm(0, self.rect)
         if self.health <= 0:  # 怪物死亡
-            self.kill()
+            return 1
+        else:
+            return 0
+
+    def dead(self, hero):
+        hero.money += self.money
+        hero.exp += self.exp
+        self.kill()

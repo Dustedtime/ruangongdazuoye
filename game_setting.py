@@ -12,7 +12,7 @@ class Setting:  # 游戏设置类
         self.music = 1
         self.sound_effect = 1
         self.volume_hold = 0
-        self.bag_space = 30
+        self.bag_space = 35
         self.init_size(screen)
         self.music_init()
 

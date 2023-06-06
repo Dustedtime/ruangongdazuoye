@@ -15,6 +15,10 @@ class Bag:  # 背包类
         self.things_images = []  # 背包中物品图像
         self.things_rects = []  # 背包各个格子中物品图像位置
 
+        self.moving = 0  # 移动背包物品位置的标志
+        self.moving_start = None  # 移动物品开始是鼠标坐标
+        self.moving_now = None  # 移动物品目前鼠标所在坐标
+
         self.equip_wear = []  # 装备中的物品标号
         self.equip_image = []  # 装备中图标
         self.selecting = 0  # 背包选中物品标号
@@ -75,7 +79,7 @@ class Bag:  # 背包类
             y_bottom = (row + 1) * self.item_width
             rect_top = self.images[1][1][1] + y_top * self.bag_height / self.bag_height_true
             rect_bottom = self.images[1][1][1] + y_bottom * self.bag_height / self.bag_height_true
-            self.things_rects.append([(rect_left, rect_top), (rect_right, rect_bottom)])
+            self.things_rects.append([(rect_left, rect_top), (rect_right, rect_bottom), [rect_left, rect_top]])
         size1 = ((self.item_width - self.item_edge) * self.bag_width / self.bag_width_true,
                  (self.item_width - self.item_edge) * self.bag_height / self.bag_height_true)
         path = os.path.join('image', 'page4', 'thing')
@@ -142,14 +146,31 @@ class Bag:  # 背包类
             elif thing[0] == 1:  # 武器
                 self.things.append(Weapon(thing[1], thing[2], hero_size, hero_rect))
 
-    def change_weapon_wear(self, pos):  # 更换穿戴中武器图标位置
-        if pos == self.equip_wear[0]:
+    def draw(self, screen):  # 绘制背包
+        for image in self.images:
+            screen.blit(image[0], image[1])
+        for i in range(self.things_num):
+            if self.things_images[i]:
+                screen.blit(self.things_images[i], tuple(self.things_rects[i][2]))
+        if self.selecting >= 0:
+            screen.blit(self.selecting_image[0], self.selecting_image[1])
+        for equip in self.equip_image:
+            if equip[1]:
+                screen.blit(equip[0], equip[1])
+        if self.showing >= 0:
+            screen.blit(self.background[0], self.background[1])
+            screen.blit(self.show_image[0], self.show_image[1])
+            for word in self.show_words:
+                screen.blit(word[0], word[1])
+
+    def change_weapon_wear(self, showing):  # 更换穿戴中武器图标位置
+        if showing == self.equip_wear[0]:
             return
-        self.equip_wear[0] = pos
-        if pos < 0:
+        self.equip_wear[0] = showing
+        if showing < 0:
             self.equip_image[0][1] = None
         else:
-            self.equip_image[0][1] = (self.things_rects[pos][0][0], self.things_rects[pos][0][1])
+            self.equip_image[0][1] = self.things_rects[showing][0]
 
     def click_select(self, pos, screen_width, screen_height):  # 选中背包物品
         selecting = -1
@@ -170,23 +191,9 @@ class Bag:  # 背包类
             x = col * self.item_width * self.bag_width / self.bag_width_true + self.images[1][1][0]
             y = row * self.item_width * self.bag_height / self.bag_height_true + self.images[1][1][1]
             self.selecting_image[1] = (x, y)
-
-    def draw(self, screen):  # 绘制背包
-        for image in self.images:
-            screen.blit(image[0], image[1])
-        for i in range(self.things_num):
-            if self.things_images[i]:
-                screen.blit(self.things_images[i], self.things_rects[i][0])
-        if self.selecting >= 0:
-            screen.blit(self.selecting_image[0], self.selecting_image[1])
-        for equip in self.equip_image:
-            if equip[1]:
-                screen.blit(equip[0], equip[1])
-        if self.showing >= 0:
-            screen.blit(self.background[0], self.background[1])
-            screen.blit(self.show_image[0], self.show_image[1])
-            for word in self.show_words:
-                screen.blit(word[0], word[1])
+        if self.selecting >= 0 and self.things_kind[self.selecting]:
+            self.moving = 1
+            self.moving_start = pos
 
     def explain(self, screen_width, screen_height):  # 对背包选中物品展开说明
         self.show_words = []
@@ -240,10 +247,99 @@ class Bag:  # 背包类
                 rect.center = (datas[i][1][0] * screen_width, datas[i][1][1] * screen_height)
             self.show_words.append([words, rect])
 
-    def throw(self):  # 丢弃背包选中物品
-        pass
+    def showing_click_left(self, screen_width, screen_height):  # 查看物品详细信息时点击了操作键
+        if self.things_kind[self.showing][0] == 1:  # 查看物品为武器
+            if self.equip_wear[0] == self.showing:  # 该武器正被装备，点击后取消装备该武器
+                self.showing_weapon_off(screen_width, screen_height)
+            else:  # 该武器未被装备，点击后装备该武器
+                self.showing_weapon_on(screen_width, screen_height)
 
-    def move(self):  # 移动背包物品
+    def showing_weapon_off(self, screen_width, screen_height):  # 取消装备选中的武器
+        info = "装备"
+        font = pygame.font.SysFont('SimSun', int(self.show_click_word[0] * screen_height))
+        words = font.render(info, True, tuple(self.show_click_word[2]))
+        rect = words.get_rect()
+        rect.center = (self.show_click_word[1][0] * screen_width, self.show_click_word[1][1] * screen_height)
+        self.show_words[-2] = [words, rect]
+        self.change_weapon_wear(-1)  # 更新背包中装备中武器
+
+    def showing_weapon_on(self, screen_width, screen_height):  # 装备选中的武器
+        info = "取消装备"
+        font = pygame.font.SysFont('SimSun', int(self.show_click_word[0] * screen_height))
+        words = font.render(info, True, tuple(self.show_click_word[2]))
+        rect = words.get_rect()
+        rect.center = (self.show_click_word[1][0] * screen_width, self.show_click_word[1][1] * screen_height)
+        self.show_words[-2] = [words, rect]
+        self.change_weapon_wear(self.showing)  # 更新背包中装备中武器
+
+    def showing_return(self, monsters, hero):  # 从物品详细信息界面返回游戏
+        time_now = pygame.time.get_ticks()
+        for monster in monsters:
+            monster.attack_time = time_now  # 更新怪物上次攻击时间
+        hero.attack_time = time_now  # 更新英雄上次攻击时间
+        self.showing = -1
+
+    def move(self, pos):  # 移动背包物品
+        self.moving_now = [pos[0], pos[1]]
+        # 计算物品被拖动的偏移量
+        x_change = self.moving_now[0] - self.moving_start[0]
+        y_change = self.moving_now[1] - self.moving_start[1]
+        # 根据偏移量更新物品图像坐标
+        self.things_rects[self.selecting][2][0] = self.things_rects[self.selecting][0][0] + x_change
+        self.things_rects[self.selecting][2][1] = self.things_rects[self.selecting][0][1] + y_change
+
+    def move_end(self):  # 移动物品结束
+        self.moving = 0
+        target = -1
+        # 被移动物品图像中心位置
+        thing_width_half = (self.things_rects[self.selecting][1][0] - self.things_rects[self.selecting][0][0]) // 2
+        thing_height_half = (self.things_rects[self.selecting][1][1] - self.things_rects[self.selecting][0][1]) // 2
+        x = self.things_rects[self.selecting][2][0] + thing_width_half
+        y = self.things_rects[self.selecting][2][1] + thing_height_half
+        # 确定移动的目的地格子位置
+        for i in range(self.space):
+            if i != self.selecting:
+                if self.things_rects[i][0][0] <= x < self.things_rects[i][1][0]:
+                    if self.things_rects[i][0][1] <= y < self.things_rects[i][1][1]:
+                        target = i
+                        break
+        self.things_rects[self.selecting][2] = list(self.things_rects[self.selecting][0])
+        if target >= 0:  # 移动有效
+            # 获取目标位置行数和列数（从零开始）
+            row = target // 5
+            col = target % 5
+            # 交换物品
+            thing = self.things[self.selecting]
+            self.things[self.selecting] = self.things[target]
+            self.things[target] = thing
+            # 交换图像
+            image = self.things_images[self.selecting]
+            self.things_images[self.selecting] = self.things_images[target]
+            self.things_images[target] = image
+            # 修改装备中的装备的信息
+            for i in range(len(self.equip_wear)):
+                if self.equip_wear[i] == self.selecting:
+                    self.equip_wear[i] = target
+                    self.equip_image[i][1] = self.things_rects[target][0]
+                elif self.equip_wear[i] == target:
+                    self.equip_wear[i] = self.selecting
+                    self.equip_image[i][1] = self.things_rects[self.selecting][0]
+            # 修改正在展示物品的编号
+            if self.showing == self.selecting:
+                self.showing = target
+            elif self.showing == target:
+                self.showing = self.selecting
+            # 修改物品种类
+            kind = self.things_kind[self.selecting]
+            self.things_kind[self.selecting] = self.things_kind[target]
+            self.things_kind[target] = kind
+            # 修改选中边框的坐标
+            self.selecting = target
+            x = col * self.item_width * self.bag_width / self.bag_width_true + self.images[1][1][0]
+            y = row * self.item_width * self.bag_height / self.bag_height_true + self.images[1][1][1]
+            self.selecting_image[1] = (x, y)
+
+    def throw(self):  # 丢弃背包选中物品
         pass
 
     def sell(self):  # 出售背包物品

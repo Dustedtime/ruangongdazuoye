@@ -15,7 +15,7 @@ def run_game():  # 游戏主函数
     pygame.display.set_caption("地宫类闯关游戏")
     clock = pygame.time.Clock()
     while True:  # 游戏主循环
-        clock.tick(60)
+        clock.tick(100)
         page.update_page()  # 更新页面
         page.check_event()  # 检测事件
         pygame.display.update()  # 屏幕刷新

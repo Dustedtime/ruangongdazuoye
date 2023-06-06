@@ -14,7 +14,7 @@ class Page:  # 定义页面类
         self.hero = None
         self.monster = pygame.sprite.Group()
         self.monster_bullets = pygame.sprite.Group()  # 怪物发出的子弹
-        self.npc = []
+        self.npc = pygame.sprite.Group()
         self.merchant = []
         self.game_map = None
         self.box = None
@@ -79,10 +79,13 @@ class Page:  # 定义页面类
         # 子弹的检测碰撞
         self.functions.collide_monster_bullet(self.monster_bullets, self.game_map.walls, self.hero.sword_attack,
                                               self.hero, self.harm, screen_width, screen_height)
-        self.functions.collide_hero_attack(self.monster, self.hero.bullets, self.hero.sword_attack, self.game_map.walls,
-                                           self.harm)
+        self.functions.collide_hero_attack(self.monster, self.game_map.walls, self.harm, self.hero,
+                                           self.setting.screen_width, self.setting.screen_height)
         # 更新伤害数值的显示
         self.harm.update(x_change, y_change)
+        # 更新npc可谈话状态
+        for npc in self.npc:
+            npc.update(x_change, y_change, self.hero)
 
     def draw_game_scene(self):  # 依次绘制屏幕的所有元素
         self.game_map.draw(self.screen)
@@ -91,6 +94,8 @@ class Page:  # 定义页面类
         self.monster.draw(self.screen)
         self.hero.sword_attack.draw(self.screen)
         self.hero.draw(self.screen)
+        for npc in self.npc:
+            npc.draw(self.screen)
         self.harm.draw(self.screen)
         for image in self.images:
             self.screen.blit(image[0], image[1])
@@ -188,8 +193,8 @@ class Page:  # 定义页面类
             self.update_page_type(1)
 
     def mouse_button_down_page4(self, event):  # 页面编号为4时鼠标按下
-        if self.images[0][1][0] <= event.pos[0] < self.images[0][2][0] and self.images[0][1][1] <= event.pos[1] < \
-                self.images[0][2][1]:  # 保存游戏进度并返回主菜单
+        if self.hero.bag.showing < 0 and self.images[0][1][0] <= event.pos[0] < self.images[0][2][0] and \
+                self.images[0][1][1] <= event.pos[1] < self.images[0][2][1]:  # 保存游戏进度并返回主菜单
             self.functions.save_progress(self)  # 保存游戏进度
             self.update_page_type(0)  # 返回主菜单
         elif self.hero.bag.showing < 0 and self.game_map.left_max <= event.pos[0] < self.game_map.right_min and \
@@ -202,11 +207,12 @@ class Page:  # 定义页面类
         elif self.hero.bag.showing >= 0 and self.hero.bag.show_words[-2][1].topleft[0] <= event.pos[0] < \
                 self.hero.bag.show_words[-2][1].bottomright[0] and self.hero.bag.show_words[-2][1].topleft[1] <= \
                 event.pos[1] < self.hero.bag.show_words[-2][1].bottomright[1]:
-            self.functions.bag_showing_click_left(self.hero, self.setting.screen_width, self.setting.screen_height)
+            self.hero.bag.showing_click_left(self.setting.screen_width, self.setting.screen_height)
+            self.hero.load_equipment()  # 更新英雄持有的武器
         elif self.hero.bag.showing >= 0 and self.hero.bag.show_words[-1][1].topleft[0] <= event.pos[0] < \
                 self.hero.bag.show_words[-1][1].bottomright[0] and self.hero.bag.show_words[-1][1].topleft[1] <= \
                 event.pos[1] < self.hero.bag.show_words[-1][1].bottomright[1]:
-            self.hero.bag.showing = -1
+            self.hero.bag.showing_return(self.monster, self.hero)
 
     def mouse_button_down_page5(self, event):  # 页面编号为5时鼠标按下
         if self.images[2][1][0] <= event.pos[0] < self.images[2][2][0] and self.images[2][1][1] <= event.pos[1] < \
@@ -240,18 +246,30 @@ class Page:  # 定义页面类
                                                                    self.images_after)  # 游戏帮助小提示换上一页
 
     def mouse_motion_page(self, event):  # 鼠标移动
-        if self.page_kind == 5:
+        if self.page_kind == 4:
+            self.mouse_motion_page4(event.pos)
+        elif self.page_kind == 5:
             self.mouse_motion_page5(event)
         pass  # 需完善其他页面
+
+    def mouse_motion_page4(self, pos):  # 页面编号为4时鼠标移动
+        if self.hero.bag.moving:
+            self.hero.bag.move(pos)  # 移动背包物品位置
 
     def mouse_motion_page5(self, event):  # 页面编号为5时鼠标移动
         if self.setting.volume_hold:
             self.functions.change_volume_constant(self, event)
 
     def mouse_button_up_page(self, event):  # 鼠标松开
-        if self.page_kind == 5 and event.button == 1:
+        if self.page_kind == 4:
+            self.mouse_button_up_page4(event.pos)
+        elif self.page_kind == 5 and event.button == 1:
             self.mouse_button_up_page5()
         pass  # 需完善其他页面或操作
+
+    def mouse_button_up_page4(self, pos):  # 页面编号为5时鼠标松开
+        if self.hero.bag.moving:
+            self.hero.bag.move_end()  # 移动背包物品位置结束
 
     def mouse_button_up_page5(self):  # 页面编号为5时鼠标松开
         if self.setting.volume_hold:
@@ -278,13 +296,20 @@ class Page:  # 定义页面类
         if self.page_kind == 2:
             self.key_down_page2(event)
         elif self.page_kind == 4:
-            self.hero.control()
+            self.key_down_page4(event)
         pass  # 需完善其他页面
 
     def key_down_page2(self, event):  # 页面编号为2时键盘按下
         with open(os.path.join('page', 'page2', 'words.json'), "r") as f:  # 加载文字属性
             data = json.load(f)
         self.functions.enter_archival_name(self, event, 0, data)  # 从键盘读取新存档名字
+
+    def key_down_page4(self, event):  # 页面编号为4时键盘按下
+        self.hero.control()
+        if event.key == pygame.K_SPACE:
+            for npc in self.npc:
+                if npc.talk_enable:  # 检测npc是否可以交谈
+                    npc.talk()  # 与npc进行交谈
 
     def key_up_page(self, event):  # 键盘按键松开
         if self.page_kind == 4:

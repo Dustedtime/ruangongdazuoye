@@ -31,7 +31,7 @@ class Hero(Creature):  # 角色类
     def load_equipment(self):  # 加载装备
         if self.bag.equip_wear[0] >= 0:
             self.weapon = self.bag.things[self.bag.equip_wear[0]]
-            self.weapon.choose = self.choose
+            self.weapon.update(self.rect, self.choose)
         else:
             self.weapon = None
 
@@ -192,20 +192,20 @@ class Hero(Creature):  # 角色类
 
         # 下面更新角色拥有的一些对象的坐标等信息
         self.sword_attack_exist(monsters)  # 判断剑气是否到达存在时间
-        if not self.weapon:
-            return x_change, y_change  # 返回地图需要移动的距离
-        self.choose = self.frame // ani
+        choose = self.frame // ani
         if self.movex:
             if self.movex < 0:
-                self.choose += 4
+                choose += 4
             else:
-                self.choose += 8
+                choose += 8
         else:
             if self.movey < 0:
-                self.choose += 12
+                choose += 12
             elif self.movey == 0:
-                self.choose = self.weapon.choose
-        self.weapon.update(self.rect, self.choose)  # 更新手持武器的坐标
+                choose = self.choose
+        self.choose = choose
+        if self.weapon:
+            self.weapon.update(self.rect, self.choose)  # 更新手持武器的坐标
         return x_change, y_change  # 返回地图需要移动的距离
 
     def attack(self, screen_height, pos):  # 角色攻击

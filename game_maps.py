@@ -40,7 +40,7 @@ class Map:  # 游戏地图类
         self.bottom += y
 
     def draw(self, screen):  # 更新场景中除角色外所有对象图像
-        screen.fill('black')
+        screen.fill((200, 200, 100))
         self.walls.draw(screen)
 
 

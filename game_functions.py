@@ -8,6 +8,7 @@ from game_harm import Harm
 from game_hero import Hero
 from game_maps import Map
 from game_monster import Monster
+from game_npc import NPC
 
 
 class Function:
@@ -119,27 +120,31 @@ class Function:
                 hero.status.update(hero, screen_height, screen_width)  # 更新状态栏信息
 
     @staticmethod
-    def collide_hero_attack(monsters, bullets, sword_attack, walls, harm):  # 英雄发出的子弹和剑气的碰撞检测
+    def collide_hero_attack(monsters, walls, harm, hero, screen_width, screen_height):  # 英雄发出的子弹和剑气的碰撞检测
         # 英雄子弹与墙的碰撞检测
-        dictionary = pygame.sprite.groupcollide(bullets, walls, False, False)
+        dictionary = pygame.sprite.groupcollide(hero.bullets, walls, False, False)
         for bullet in dictionary.keys():
             for wall in dictionary[bullet]:
                 if pygame.sprite.collide_mask(bullet, wall):
                     bullet.kill()
         # 英雄子弹与怪物的碰撞检测
-        dictionary = pygame.sprite.groupcollide(bullets, monsters, False, False)
+        dictionary = pygame.sprite.groupcollide(hero.bullets, monsters, False, False)
         for bullet in dictionary.keys():
             for monster in dictionary[bullet]:
                 if pygame.sprite.collide_mask(bullet, monster):
-                    monster.attacked(bullet.strength, harm)  # 对怪物造成伤害
+                    if monster.attacked(bullet.strength, harm):  # 对怪物造成伤害
+                        monster.dead(hero)  # 怪物死亡
+                        hero.status.update(hero, screen_height, screen_width)  # 更新状态栏
                     bullet.kill()
         # 英雄剑气与怪物的碰撞检测
-        dictionary = pygame.sprite.groupcollide(sword_attack, monsters, False, False)
+        dictionary = pygame.sprite.groupcollide(hero.sword_attack, monsters, False, False)
         for attack in dictionary.keys():
             for monster in dictionary[attack]:
                 if pygame.sprite.collide_mask(attack, monster) and not monster.attacked_sword:
                     monster.attacked_sword = 1  # 怪物被剑气攻击过的标志置为1
-                    monster.attacked(attack.strength - monster.defence, harm)  # 对怪物造成伤害
+                    if monster.attacked(attack.strength, harm):  # 对怪物造成伤害
+                        monster.dead(hero)  # 怪物死亡
+                        hero.status.update(hero, screen_height, screen_width)  # 更新状态栏
 
     @staticmethod
     def enter_archival_name(page, event, num, data):  # 从键盘读取新存档名字
@@ -283,6 +288,13 @@ class Function:
                 # noinspection PyTypeChecker
                 page.monster.add(Monster(data[i], page.setting.screen_width, page.setting.screen_height))
             i += 1
+        # 实例化npc
+        path = os.path.join('page', page.current_archival[1], 'page4', 'floor' + str(page.game_map.height), 'npc.json')
+        if os.path.exists(path):
+            with open(path, 'r') as f:
+                data = json.load(f)
+        for dictionary in data:
+            page.npc.add(NPC(dictionary, page.setting.screen_width, page.setting.screen_height))
         # 实例化伤害显示
         page.harm = Harm(page.setting.screen_height)
         page.update_page_type(4)
@@ -423,32 +435,3 @@ class Function:
             pos_temp = num - 1
         images[2] = images_after[pos_temp]
         return pos_temp
-
-    def bag_showing_click_left(self, hero, screen_width, screen_height):  # 查看物品详细信息时点击了操作键
-        if hero.bag.things_kind[hero.bag.selecting][0] == 1:  # 查看物品为武器
-            if hero.bag.equip_wear[0] == hero.bag.selecting:  # 该武器正被装备，点击后取消装备该武器
-                self.bag_showing_weapon_off(hero, screen_width, screen_height)
-            else:  # 该武器未被装备，点击后装备该武器
-                self.bag_showing_weapon_on(hero, screen_width, screen_height)
-
-    @staticmethod
-    def bag_showing_weapon_off(hero, screen_width, screen_height):  # 取消装备选中的武器
-        info = "装备"
-        font = pygame.font.SysFont('SimSun', int(hero.bag.show_click_word[0] * screen_height))
-        words = font.render(info, True, tuple(hero.bag.show_click_word[2]))
-        rect = words.get_rect()
-        rect.center = (hero.bag.show_click_word[1][0] * screen_width, hero.bag.show_click_word[1][1] * screen_height)
-        hero.bag.show_words[-2] = [words, rect]
-        hero.bag.change_weapon_wear(-1)  # 更新背包中装备中武器
-        hero.load_equipment()  # 更新英雄持有的武器
-
-    @staticmethod
-    def bag_showing_weapon_on(hero, screen_width, screen_height):  # 装备选中的武器
-        info = "取消装备"
-        font = pygame.font.SysFont('SimSun', int(hero.bag.show_click_word[0] * screen_height))
-        words = font.render(info, True, tuple(hero.bag.show_click_word[2]))
-        rect = words.get_rect()
-        rect.center = (hero.bag.show_click_word[1][0] * screen_width, hero.bag.show_click_word[1][1] * screen_height)
-        hero.bag.show_words[-2] = [words, rect]
-        hero.bag.change_weapon_wear(hero.bag.selecting)  # 更新背包中装备中武器
-        hero.load_equipment()  # 更新英雄持有的武器
