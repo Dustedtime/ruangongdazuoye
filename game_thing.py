@@ -23,6 +23,18 @@ class Weapon(Thing):  # 武器类
     def attack(self):  # 攻击
         pass
 
+    def equip(self):  # 装备
+        pass
+
+
+class Shield(Thing):  # 盾牌类
+    def __init__(self, dictionary):
+        super().__init__(dictionary)
+        self.defence = dictionary['defence']  # 防御力
+
+    def equip(self):  # 装备
+        pass
+
 
 class Jewel(Thing):  # 宝石类
     def __init__(self, dictionary):

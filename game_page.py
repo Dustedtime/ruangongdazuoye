@@ -16,8 +16,8 @@ class Page:  # 定义页面类
         self.monster_bullets = pygame.sprite.Group()  # 怪物发出的子弹
         self.npc = pygame.sprite.Group()
         self.merchant = pygame.sprite.Group()
+        self.box = pygame.sprite.Group()
         self.game_map = None
-        self.box = None
         self.harm = None
         self.page_kind = 0  # 页面类别
         self.archival = []  # 游戏所有存档
@@ -60,7 +60,11 @@ class Page:  # 定义页面类
             self.draw_game_scene()  # 更新游戏画面
 
     def update_game_scene(self):  # 更新游戏画面
-        if self.hero.bag.showing >= 0:
+        if self.hero.bag.showing >= 0:  # 检测是否正在查看物品详细信息
+            return
+        # 检测当前宝箱以及商人状态
+        box, merchant = self.functions.box_merchant_check(self.box, self.merchant)
+        if box or merchant:
             return
         # 更新人物位置
         screen_width, screen_height = self.setting.screen_width, self.setting.screen_height
@@ -83,28 +87,38 @@ class Page:  # 定义页面类
                                            self.setting.screen_width, self.setting.screen_height)
         # 更新伤害数值的显示
         self.harm.update(x_change, y_change)
-        # 更新npc可谈话状态
-        for npc in self.npc:
-            npc.update(x_change, y_change, self.hero)
-        # 更新商人坐标与交易状态
-        for merchant in self.merchant:
-            merchant.update(x_change, y_change, self.hero)
+        # 更新npc位置以及可谈话状态
+        self.npc.update(x_change, y_change, self.hero)
+        # 更新商人位置以及可交易状态
+        self.merchant.update(x_change, y_change, self.hero)
+        # 更新宝箱位置和状态
+        self.box.update(x_change, y_change, self.hero)
 
     def draw_game_scene(self):  # 依次绘制屏幕的所有元素
         self.game_map.draw(self.screen)
+        self.monster_bullets.draw(self.screen)
+        self.hero.bullets.draw(self.screen)
+        for box in self.box:
+            box.draw(self.screen)
+        self.monster.draw(self.screen)
+        self.hero.sword_attack.draw(self.screen)
+        self.harm.draw(self.screen)
         for npc in self.npc:
             npc.draw(self.screen)
         for merchant in self.merchant:
             merchant.draw(self.screen)
-        self.monster_bullets.draw(self.screen)
-        self.hero.bullets.draw(self.screen)
-        self.monster.draw(self.screen)
-        self.hero.sword_attack.draw(self.screen)
         self.hero.draw(self.screen)
-        self.harm.draw(self.screen)
+        for merchant in self.merchant:
+            if merchant.trading:
+                merchant.store.draw(self.screen)
+        for box in self.box:
+            if box.opening:
+                box.draw_opening(self.screen)
+        for i in range(self.hero.bag.space):
+            if self.hero.bag.things_images[i]:
+                self.screen.blit(self.hero.bag.things_images[i], tuple(self.hero.bag.things_rects[i][2]))
         for image in self.images:
             self.screen.blit(image[0], image[1])
-        pass  # 还欠npc等要素的更新
 
     def check_event(self):  # 监测事件
         for event in pygame.event.get():
@@ -140,7 +154,6 @@ class Page:  # 定义页面类
             self.mouse_button_down_page5(event)
         elif self.page_kind == 6 and event.button == 1:
             self.mouse_button_down_page6(event)
-        pass  # 需完善其他页面或操作
 
     def mouse_button_down_page0(self, event):  # 页面编号为0时鼠标按下
         if self.images[1][1][0] <= event.pos[0] < self.images[1][2][0] and self.images[1][1][1] <= event.pos[1] < \
@@ -198,26 +211,108 @@ class Page:  # 定义页面类
             self.update_page_type(1)
 
     def mouse_button_down_page4(self, event):  # 页面编号为4时鼠标按下
-        if self.hero.bag.showing < 0 and self.images[0][1][0] <= event.pos[0] < self.images[0][2][0] and \
-                self.images[0][1][1] <= event.pos[1] < self.images[0][2][1]:  # 保存游戏进度并返回主菜单
-            self.functions.save_progress(self)  # 保存游戏进度
-            self.update_page_type(0)  # 返回主菜单
-        elif self.hero.bag.showing < 0 and self.game_map.left_max <= event.pos[0] < self.game_map.right_min and \
-                self.game_map.top_max <= event.pos[1] < self.game_map.bottom_min:  # 角色攻击
+        # 检测当前宝箱以及商人状态，以判断当前能否退出游戏等
+        box, merchant = self.functions.box_merchant_check(self.box, self.merchant)
+        # 保存游戏进度并返回主菜单
+        if self.images[0][1][0] <= event.pos[0] < self.images[0][2][0] and self.images[0][1][1] <= event.pos[1] < \
+                self.images[0][2][1]:
+            if self.hero.bag.showing < 0 and not box and not merchant:
+                self.functions.save_progress(self)  # 保存游戏进度
+                self.update_page_type(0)  # 返回主菜单
+        # 角色攻击
+        elif self.game_map.left_max <= event.pos[0] < self.game_map.right_min and self.game_map.top_max <= \
+                event.pos[1] < self.game_map.bottom_min and self.hero.bag.showing < 0 and not box and not merchant:
             self.hero.attack(self.setting.screen_height, event.pos)
             self.hero.bag.selecting = -1
+        # 选中背包物品
         elif self.hero.bag.images[1][1][0] <= event.pos[0] < self.hero.bag.images[1][2][0] and \
-                self.hero.bag.images[1][1][1] <= event.pos[1] < self.hero.bag.images[1][2][1]:  # 选中背包物品
-            self.hero.bag.click_select(event.pos, self.setting.screen_width, self.setting.screen_height)
-        elif self.hero.bag.showing >= 0 and self.hero.bag.show_words[-2][1].topleft[0] <= event.pos[0] < \
+                self.hero.bag.images[1][1][1] <= event.pos[1] < self.hero.bag.images[1][2][1]:
+            self.hero.bag.click_select(event.pos, box, merchant)
+        # 通过点击增减按钮改变选中背包物品数量
+        elif self.hero.bag.selecting >= 0 and self.hero.bag.selecting_num_image[1][1][0] <= event.pos[0] < \
+                self.hero.bag.selecting_num_image[1][2][0] and self.hero.bag.selecting_num_image[1][1][1] <= \
+                event.pos[1] < self.hero.bag.selecting_num_image[1][2][1]:
+            self.hero.bag.change_selecting_num(-1)
+        elif self.hero.bag.selecting >= 0 and self.hero.bag.selecting_num_image[2][1][0] <= event.pos[0] < \
+                self.hero.bag.selecting_num_image[2][2][0] and self.hero.bag.selecting_num_image[2][1][1] <= \
+                event.pos[1] < self.hero.bag.selecting_num_image[2][2][1]:
+            self.hero.bag.change_selecting_num(1)
+        # 通过点击或拖动刻度改变选中背包物品数量
+        elif self.hero.bag.selecting >= 0 and self.hero.bag.selecting_num_image[3][1].x <= event.pos[0] < \
+                self.hero.bag.selecting_num_image[3][1].right and self.hero.bag.selecting_num_image[3][1].y <= \
+                event.pos[1] < self.hero.bag.selecting_num_image[3][1].bottom:
+            self.hero.bag.change_selecting_num_tick(event.pos[0], 1)
+        elif self.hero.bag.selecting >= 0 and self.hero.bag.selecting_num_image[0][1][0] <= event.pos[0] < \
+                self.hero.bag.selecting_num_image[0][2][0] and self.hero.bag.selecting_num_image[3][1].y <= \
+                event.pos[1] < self.hero.bag.selecting_num_image[3][1].bottom:
+            self.hero.bag.change_selecting_num_tick(event.pos[0], 0)
+        # 选中宝箱物品
+        elif box and box.images_opening[0][1][0] <= event.pos[0] < box.images_opening[0][2][0] and \
+                box.images_opening[0][1][1] <= event.pos[1] < box.images_opening[0][2][1]:
+            box.click_select(event.pos, self.hero.bag)
+        # 通过点击增减按钮改变选中宝箱物品数量
+        elif box and box.selecting >= 0 and box.selecting_num_image[1][1][0] <= event.pos[0] < \
+                box.selecting_num_image[1][2][0] and box.selecting_num_image[1][1][1] <= event.pos[1] < \
+                box.selecting_num_image[1][2][1]:
+            box.change_selecting_num(-1)
+        elif box and box.selecting >= 0 and box.selecting_num_image[2][1][0] <= event.pos[0] < \
+                box.selecting_num_image[2][2][0] and box.selecting_num_image[2][1][1] <= event.pos[1] < \
+                box.selecting_num_image[2][2][1]:
+            box.change_selecting_num(1)
+        # 通过点击或拖动刻度改变选中宝箱物品数量
+        elif box and box.selecting >= 0 and box.selecting_num_image[3][1].x <= event.pos[0] < \
+                box.selecting_num_image[3][1].right and box.selecting_num_image[3][1].y <= event.pos[1] < \
+                box.selecting_num_image[3][1].bottom:
+            box.change_selecting_num_tick(event.pos[0], 1)
+        elif box and box.selecting >= 0 and box.selecting_num_image[0][1][0] <= event.pos[0] < \
+                box.selecting_num_image[0][2][0] and box.selecting_num_image[3][1].y <= event.pos[1] < \
+                box.selecting_num_image[3][1].bottom:
+            box.change_selecting_num_tick(event.pos[0], 0)
+        # 关闭宝箱
+        elif box and box.images_opening[2][1][0] <= event.pos[0] < box.images_opening[2][2][0] and \
+                box.images_opening[2][1][1] <= event.pos[1] < box.images_opening[2][2][1]:
+            box.close(self.monster, self.hero)
+        # 选中商店物品
+        elif merchant and merchant.store.images[1][1][0] <= event.pos[0] < merchant.store.images[1][2][0] and \
+                merchant.store.images[1][1][1] <= event.pos[1] < merchant.store.images[1][2][1]:
+            merchant.store.click(event.pos, self.setting.screen_width, self.setting.screen_height, self.hero.bag)
+        # 离开商店
+        elif merchant and merchant.store.images[2][1][0] <= event.pos[0] < merchant.store.images[2][2][0] and \
+                merchant.store.images[2][1][1] <= event.pos[1] < merchant.store.images[2][2][1]:
+            merchant.trading_return(self.monster, self.hero)
+        # 点击背包物品详情界面的左边
+        if self.hero.bag.showing >= 0 and self.hero.bag.show_words[-2][1].topleft[0] <= event.pos[0] < \
                 self.hero.bag.show_words[-2][1].bottomright[0] and self.hero.bag.show_words[-2][1].topleft[1] <= \
                 event.pos[1] < self.hero.bag.show_words[-2][1].bottomright[1]:
-            self.hero.bag.showing_click_left(self.setting.screen_width, self.setting.screen_height)
-            self.hero.load_equipment()  # 更新英雄持有的武器
+            self.hero.bag.showing_click_left(self.setting.screen_width, self.setting.screen_height, box, merchant,
+                                             self.hero)
+            if not box and not merchant:
+                self.hero.load_equipment()  # 更新英雄持有的武器
+        # 点击背包物品详情界面的右边，即退出查看
         elif self.hero.bag.showing >= 0 and self.hero.bag.show_words[-1][1].topleft[0] <= event.pos[0] < \
                 self.hero.bag.show_words[-1][1].bottomright[0] and self.hero.bag.show_words[-1][1].topleft[1] <= \
                 event.pos[1] < self.hero.bag.show_words[-1][1].bottomright[1]:
-            self.hero.bag.showing_return(self.monster, self.hero)
+            self.hero.bag.showing_return(self.monster, self.hero, box, merchant)
+        # 点击宝箱物品详情界面的左边，即拾取物品
+        elif box and box.showing >= 0 and box.show_words[-2][1].topleft[0] <= event.pos[0] < \
+                box.show_words[-2][1].bottomright[0] and box.show_words[-2][1].topleft[1] <= \
+                event.pos[1] < box.show_words[-2][1].bottomright[1]:
+            box.pick(self.hero.bag)
+        # 点击宝箱物品详情界面的右边，即退出详情查看
+        elif box and box.showing >= 0 and box.show_words[-1][1].topleft[0] <= event.pos[0] < \
+                box.show_words[-1][1].bottomright[0] and box.show_words[-1][1].topleft[1] <= \
+                event.pos[1] < box.show_words[-1][1].bottomright[1]:
+            box.showing_return()
+        # 点击商店物品详情界面的左边，即购买物品
+        elif merchant and merchant.store.showing >= 0 and merchant.store.show_words[-2][1].topleft[0] <= event.pos[0] < \
+                merchant.store.show_words[-2][1].bottomright[0] and merchant.store.show_words[-2][1].topleft[1] <= \
+                event.pos[1] < merchant.store.show_words[-2][1].bottomright[1]:
+            merchant.store.purchase(self.hero, self.setting.screen_width, self.setting.screen_height)
+        # 点击商店物品详情界面的右边，即退出详细信息界面
+        elif merchant and merchant.store.showing >= 0 and merchant.store.show_words[-1][1].topleft[0] <= event.pos[0] < \
+                merchant.store.show_words[-1][1].bottomright[0] and merchant.store.show_words[-1][1].topleft[1] <= \
+                event.pos[1] < merchant.store.show_words[-1][1].bottomright[1]:
+            merchant.store.showing_cancel()
 
     def mouse_button_down_page5(self, event):  # 页面编号为5时鼠标按下
         if self.images[2][1][0] <= event.pos[0] < self.images[2][2][0] and self.images[2][1][1] <= event.pos[1] < \
@@ -258,8 +353,20 @@ class Page:  # 定义页面类
         pass  # 需完善其他页面
 
     def mouse_motion_page4(self, pos):  # 页面编号为4时鼠标移动
-        if self.hero.bag.moving:
-            self.hero.bag.move(pos)  # 移动背包物品位置
+        # 检测是否有符合条件的宝箱对象
+        box = None
+        for box_temp in self.box:
+            if box_temp.opening:
+                box = box_temp
+                break
+        if self.hero.bag.move_enable:
+            self.hero.bag.move(pos)  # 移动背包物品
+        elif box and box.move_enable:
+            box.move_thing(pos)  # 移动宝箱物品
+        elif self.hero.bag.selecting_num_moving:
+            self.hero.bag.change_selecting_num_moving(pos[0], 0)  # 拖动刻度改变选中背包物品数量
+        elif box and box.selecting_num_moving:
+            box.change_selecting_num_moving(pos[0], 0)  # 拖动刻度改变选中宝箱物品数量
 
     def mouse_motion_page5(self, event):  # 页面编号为5时鼠标移动
         if self.setting.volume_hold:
@@ -272,9 +379,21 @@ class Page:  # 定义页面类
             self.mouse_button_up_page5()
         pass  # 需完善其他页面或操作
 
-    def mouse_button_up_page4(self, pos):  # 页面编号为5时鼠标松开
-        if self.hero.bag.moving:
-            self.hero.bag.move_end()  # 移动背包物品位置结束
+    def mouse_button_up_page4(self, pos):  # 页面编号为4时鼠标松开
+        # 检测当前宝箱以及商人状态
+        box, merchant = self.functions.box_merchant_check(self.box, self.merchant)
+        if self.hero.bag.move_enable:
+            self.hero.bag.move_end(box)  # 移动背包物品结束
+        elif box and box.move_enable:
+            box.move_end(self.hero.bag)  # 移动宝箱物品结束
+        if self.hero.bag.showing_enable:
+            self.hero.bag.explain(self.setting.screen_width, self.setting.screen_height, box, merchant)  # 展示背包物品详细信息
+        elif self.hero.bag.selecting_num_moving:
+            self.hero.bag.change_selecting_num_moving(pos[0], 1)  # 结束通过拖动刻度改变选中背包物品数量
+        elif box and box.showing_enable:
+            box.explain(self.setting.screen_width, self.setting.screen_height)  # 展示宝箱物品详细信息
+        elif box and box.selecting_num_moving:
+            box.change_selecting_num_moving(pos[0], 1)  # 结束通过拖动刻度改变选中宝箱物品数量
 
     def mouse_button_up_page5(self):  # 页面编号为5时鼠标松开
         if self.setting.volume_hold:
@@ -285,12 +404,14 @@ class Page:  # 定义页面类
             with open(os.path.join('page', 'page5', 'images.json'), "w") as f:  # 将最终效果保存至文件
                 json.dump(data, f)
 
-    def mousewheel_page(self, event):
+    def mousewheel_page(self, event):  # 鼠标滚轮滚动
         if self.page_kind == 4:
             self.mousewheel_page4(event)
 
-    def mousewheel_page4(self, event):
-        if self.hero.bag.showing >= 0:
+    def mousewheel_page4(self, event):  # 页面编号为4时鼠标滚轮滚动
+        # 检测当前宝箱以及商人状态
+        box, merchant = self.functions.box_merchant_check(self.box, self.merchant)
+        if self.hero.bag.showing >= 0 or box or merchant:
             return
         if event.y > 0:
             self.hero.change_weapon(-1)
@@ -310,15 +431,24 @@ class Page:  # 定义页面类
         self.functions.enter_archival_name(self, event, 0, data)  # 从键盘读取新存档名字
 
     def key_down_page4(self, event):  # 页面编号为4时键盘按下
+        # 检测当前宝箱以及商人状态
+        box, merchant = self.functions.box_merchant_check(self.box, self.merchant)
+        if box or merchant:
+            return
         self.hero.control()
         if event.key == pygame.K_SPACE:
+            # 检测是否打开宝箱
+            for box in self.box:
+                if box.open_enable:
+                    box.opening = 1
+                    return  # 打开宝箱后直接结束该函数，防止同时打开多个宝箱或与商人进行交易（即宝箱优先级最高，下面类似）
+            for merchant in self.merchant:
+                if merchant.trade_enable:
+                    merchant.trading = 1
+                    return
             for npc in self.npc:
                 if npc.talk_enable:  # 检测npc是否可以交谈
                     npc.talk()  # 与npc进行交谈
-            for merchant in self.merchant:
-                if merchant.trade_enable:  # 检测商人是否可以交易
-                    merchant.trade()  # 与商人进行交易
-
 
     def key_up_page(self, event):  # 键盘按键松开
         if self.page_kind == 4:

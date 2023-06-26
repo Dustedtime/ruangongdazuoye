@@ -14,8 +14,9 @@ class NPC(pygame.sprite.Sprite):
         self.rect.topleft = (screen_width * dictionary['rect'][0], screen_height * dictionary['rect'][1])
         self.font_height = int(dictionary['font_height'] * screen_height)
         self.font_gap = dictionary['font_gap'] * screen_height  # 字体行间距
-        self.status = dictionary['status']  # 状态，决定对话时显示哪些内容
-        self.status_len = dictionary['status_len']  # 状态总数
+        self.status_start = dictionary['status_start']  # 起始状态
+        self.status_end = dictionary['status_end']  # 终止状态
+        self.status = self.status_start  # 当前状态
         self.color = tuple(dictionary['color'])
         self.backshake = dictionary['backshake']
         self.talk_time = 0
@@ -54,7 +55,9 @@ class NPC(pygame.sprite.Sprite):
             rect.centerx = self.rect.centerx
             rect.y = self.rect.y - (length - i) * self.font_gap
             self.words.append([word, rect])
-        self.status = (self.status + 1) % self.status_len  # 更新下次谈话状态
+        # 更新下次谈话状态
+        self.status += 1
+        self.status = self.status_start + (self.status - self.status_start) % (self.status_end - self.status_start + 1)
 
     def update(self, x, y, hero):  # 更新npc位置及可能存在的谈话文本的位置，以及更新交谈状态
         self.rect.x += x
@@ -81,6 +84,7 @@ class NPC(pygame.sprite.Sprite):
         else:
             self.talk_enable = 0
             self.talking = 0
+            self.status = self.status_start  # 重置谈话状态
 
     def talk(self):  # 进行交谈
         self.talking = 1
