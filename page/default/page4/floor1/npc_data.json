@@ -10,19 +10,19 @@
     "font_gap": 0.03,
     "color": [0, 0, 0],
     "backshake": 500,
-    "words_tip": "!"
+    "words_tip": "..."
   },
   {
-    "size": 0.1,
+    "size": 0.05,
     "rect": [0.45, 0.85],
-    "image":["image", "page4", "npc", "2", "npc1.bmp"],
-    "kind": 2,
+    "image":["image", "page4", "npc", "1", "npc1.bmp"],
+    "kind": 1,
     "status_start": 0,
     "status_end": 2,
     "font_height": 0.02,
     "font_gap": 0.03,
     "color": [0, 0, 0],
     "backshake": 500,
-    "words_tip": "!"
+    "words_tip": "..."
   }
 ]

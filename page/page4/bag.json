@@ -1,1 +1,5 @@
-[[["image", "page4", "player", "bag.bmp"], [0, 0.2], [0.25, 0.7]], [["image", "page4", "player", "bag_item.bmp"], [0, 0.25], [0.25, 0.65]], [["image", "page4", "player", "bag_title.bmp"], [0, 0.2], [0.25, 0.05]]]
+[
+  [["image", "page4", "bag", "bag_title.bmp"], [0, 0.2], [0.25, 0.05]],
+  [["image", "page4", "bag", "bag_item.bmp"], [0, 0.25], [0.25, 0.65]],
+  [["image", "page4", "bag", "bag_selecting_num.bmp"], [0.05, 0.9], [0.2, 0.1]]
+]
