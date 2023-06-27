@@ -5,6 +5,7 @@ import sys
 import pygame
 
 from game_functions import Function
+from game_tip import Tip
 
 
 class Page:  # 定义页面类
@@ -19,6 +20,7 @@ class Page:  # 定义页面类
         self.box = pygame.sprite.Group()
         self.game_map = None
         self.harm = None
+        self.tip = Tip(setting.screen_width, setting.screen_height)
         self.page_kind = 0  # 页面类别
         self.archival = []  # 游戏所有存档
         self.current_archival = [-1, '']  # 游玩中的存档
@@ -55,9 +57,11 @@ class Page:  # 定义页面类
             self.screen.blit(image[0], image[1])
         for word in self.words:
             self.screen.blit(word[0], word[1])
+        self.tip.update()
         if self.game_map:
             self.update_game_scene()  # 更新游戏数据
             self.draw_game_scene()  # 更新游戏画面
+        self.tip.draw(self.screen)
 
     def update_game_scene(self):  # 更新游戏画面
         if self.hero.bag.showing >= 0:  # 检测是否正在查看物品详细信息
@@ -117,6 +121,8 @@ class Page:  # 定义页面类
         for i in range(self.hero.bag.space):
             if self.hero.bag.things_images[i]:
                 self.screen.blit(self.hero.bag.things_images[i], tuple(self.hero.bag.things_rects[i][2]))
+                if self.hero.bag.things_num_words[i]:
+                    self.screen.blit(self.hero.bag.things_num_words[i][0], self.hero.bag.things_num_words[i][1])
         for image in self.images:
             self.screen.blit(image[0], image[1])
 
@@ -219,6 +225,7 @@ class Page:  # 定义页面类
             if self.hero.bag.showing < 0 and not box and not merchant:
                 self.functions.save_progress(self)  # 保存游戏进度
                 self.update_page_type(0)  # 返回主菜单
+                return
         # 角色攻击
         elif self.game_map.left_max <= event.pos[0] < self.game_map.right_min and self.game_map.top_max <= \
                 event.pos[1] < self.game_map.bottom_min and self.hero.bag.showing < 0 and not box and not merchant:
@@ -307,7 +314,7 @@ class Page:  # 定义页面类
         elif merchant and merchant.store.showing >= 0 and merchant.store.show_words[-2][1].topleft[0] <= event.pos[0] < \
                 merchant.store.show_words[-2][1].bottomright[0] and merchant.store.show_words[-2][1].topleft[1] <= \
                 event.pos[1] < merchant.store.show_words[-2][1].bottomright[1]:
-            merchant.store.purchase(self.hero, self.setting.screen_width, self.setting.screen_height)
+            merchant.store.purchase(self.hero, self.setting.screen_width, self.setting.screen_height, self.tip)
         # 点击商店物品详情界面的右边，即退出详细信息界面
         elif merchant and merchant.store.showing >= 0 and merchant.store.show_words[-1][1].topleft[0] <= event.pos[0] < \
                 merchant.store.show_words[-1][1].bottomright[0] and merchant.store.show_words[-1][1].topleft[1] <= \

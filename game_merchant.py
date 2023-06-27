@@ -213,7 +213,7 @@ class Store:  # 商店类
                 information.append(data[:-1])
                 data = f.readline()
             pass
-        information[-1] = "购买价格："
+        information.append("购买价格：")
         information.append("购买")
         information.append("取消")
         # 读取字体设置的信息
@@ -244,8 +244,9 @@ class Store:  # 商店类
                 rect.center = (datas[i][1][0] * screen_width, datas[i][1][1] * screen_height)
             self.show_words.append([words, rect])
 
-    def purchase(self, hero, screen_width, screen_height):  # 购买商品
+    def purchase(self, hero, screen_width, screen_height, tip):  # 购买商品
         if hero.money < self.things[self.showing].buy_price:  # 提示金币不足
+            tip.create_tip("金币不足！")
             return
         target = -1
         if self.things_kind[self.showing][-2]:  # 物品可以叠放，优先查找背包重复物品位置，叠放存储
@@ -277,6 +278,7 @@ class Store:  # 商店类
 
     def move_to_bag_not_empty(self, bag, target):  # 将购买的物品与背包目标格子的物品重叠存放
         bag.things_kind[target][-1] += 1
+        bag.change_things_num_text(target)
         self.after_purchase()
 
     def move_to_bag_empty(self, bag, target):  # 将购买的物品存放至背包的目标空格中
@@ -286,6 +288,7 @@ class Store:  # 商店类
         size = (bag.things_rects[target][1][0] - bag.things_rects[target][0][0],
                 bag.things_rects[target][1][1] - bag.things_rects[target][0][1])
         bag.things_images[target] = pygame.transform.scale(self.things_images[self.showing], size)
+        bag.change_things_num_text(target)
         self.after_purchase()
 
     def after_purchase(self):  # 购买之后商店的善后工作（攒积货物上架等）

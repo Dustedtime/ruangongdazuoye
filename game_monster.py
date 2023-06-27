@@ -14,6 +14,7 @@ class Monster(Creature):  # 定义怪物类
         self.move_time_gap = dictionary['move_time_gap']  # 怪物移动方向更新的时间
         self.backshake = dictionary['backshake']  # 怪物攻击后摇
         self.chasing = 0  # 怪物是否追逐角色
+        self.chasing_gap = dictionary['chasing_gap']  # 用于判断怪物与英雄之间是否隔墙的丈量步长，越小越准确
         self.flying = dictionary['flying']  # 怪物是否属于飞行类，用于判断怪物站定时是否需要继续刷新帧率，以维持飞行状态
         self.withdraw_speed = dictionary['withdraw_speed'] * screen_height  # 怪物撤退速度
         self.attacked_sword = dictionary['attacked_sword']  # 判断怪物是否被剑气击中过，用来防止怪物被一个剑气重复击中
@@ -29,7 +30,7 @@ class Monster(Creature):  # 定义怪物类
         screen.blit(self.image, self.rect)
 
     def update(self, x, y, game_map, ani, hero, screen_height, monster_bullets, monsters, harm):  # 更新怪物位置，参数x和y为地图偏移量
-        self.move(hero.rect)
+        self.move(hero.rect, game_map)
         self.collide_monster(monsters)  # 怪物之间的碰撞检测，防止怪物完全重叠
         # 使用临时列表更新更为准确的坐标
         self.rect_temp[0] += x + self.movex
@@ -189,20 +190,21 @@ class Monster(Creature):  # 定义怪物类
     def collide_monster(self, monsters):  # 怪物之间的碰撞检测，防止怪物完全叠在一起
         for monster in pygame.sprite.spritecollide(self, monsters, False):
             if monster != self:
-                if self.movex > 0:
-                    if monster.rect.centerx > self.rect.centerx:
-                        self.movex = 0
-                else:
-                    if monster.rect.centerx < self.rect.centerx:
-                        self.movex = 0
-                if self.movey > 0:
-                    if monster.rect.centery > self.rect.centery:
-                        self.movey = 0
-                else:
-                    if monster.rect.centery < self.rect.centery:
-                        self.movey = 0
+                if pygame.sprite.collide_mask(self, monster):
+                    if self.movex > 0:
+                        if monster.rect.centerx > self.rect.centerx:
+                            self.movex = 0
+                    else:
+                        if monster.rect.centerx < self.rect.centerx:
+                            self.movex = 0
+                    if self.movey > 0:
+                        if monster.rect.centery > self.rect.centery:
+                            self.movey = 0
+                    else:
+                        if monster.rect.centery < self.rect.centery:
+                            self.movey = 0
 
-    def move(self, hero_rect):  # 怪物移动
+    def move(self, hero_rect, game_map):  # 怪物移动
         # 怪物与角色的距离，判断是否进行跟随
         distance = (abs(self.rect.centerx - hero_rect.centerx)) ** 2 + (abs(self.rect.centery - hero_rect.centery)) ** 2
         if distance <= self.range_min:
@@ -214,8 +216,34 @@ class Monster(Creature):  # 定义怪物类
         else:
             self.chasing = 0
         if self.chasing:  # 怪物跟随角色
-            self.follow(hero_rect)
-            return
+            chasing_enable = 1
+            x_min = min(hero_rect.centerx, self.rect.centerx) - game_map.left
+            x_max = max(hero_rect.centerx, self.rect.centerx) - game_map.left
+            y_min = min(hero_rect.centery, self.rect.centery) - game_map.top
+            y_max = max(hero_rect.centery, self.rect.centery) - game_map.top
+            x_gap = x_max - x_min
+            y_gap = y_max - y_min
+            width = game_map.wall_width
+            if x_gap == 0 and y_gap == 0:
+                self.follow(hero_rect)
+                return
+            elif x_gap >= y_gap:
+                x_div = self.chasing_gap
+                y_div = y_gap * x_div / x_gap
+            else:
+                y_div = self.chasing_gap
+                x_div = x_gap * y_div / y_gap
+            while x_min <= x_max and y_min <= y_max:
+                if game_map.layout_data[int(y_min // width)][int(x_min // width)]:
+                    chasing_enable = 0
+                    break
+                x_min += x_div
+                y_min += y_div
+            if chasing_enable:
+                self.follow(hero_rect)
+                return
+            else:
+                self.chasing = 0
         time_now = pygame.time.get_ticks()
         if time_now - self.move_time < self.move_time_gap:
             return

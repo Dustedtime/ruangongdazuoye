@@ -11,6 +11,7 @@ from game_maps import Map
 from game_merchant import Merchant
 from game_monster import Monster
 from game_npc import NPC
+from game_tip import Tip
 
 
 class Function:
@@ -345,6 +346,7 @@ class Function:
         path = os.path.join('page', current_archival, 'page4', 'floor' + str(page.game_map.height), 'map_data.json')
         with open(path, 'r') as f:
             data = json.load(f)
+        data["layout_data"] = page.game_map.layout_data
         data["left"] = [page.game_map.left / screen_width, 0]
         data["right"] = [page.game_map.right / screen_width, 0]
         data["top"] = [page.game_map.top / screen_height, 0]
@@ -375,6 +377,21 @@ class Function:
         data['things_kind'] = page.hero.bag.things_kind
         with open(path, 'w') as f:
             json.dump(data, f)
+        # 保存宝箱信息
+        path = os.path.join('page', current_archival, 'page4', 'floor' + str(page.game_map.height), 'box_data.json')
+        with open(path, 'r') as f:
+            data_list = json.load(f)
+        box_num = len(data_list)
+        i = 0
+        for box in page.box:
+            if i == box_num:
+                data_list.append(data_list[-1].copy())
+                box_num += 1
+            data_list[i]['rect'] = [box.rect.x / screen_width, box.rect.y / screen_height]
+            data_list[i]['things_kind'] = box.things_kind
+            i += 1
+        with open(path, 'w') as f:
+            json.dump(data_list, f)
         # 保存怪物信息
         path = os.path.join('page', current_archival, 'page4', 'floor' + str(page.game_map.height), 'monster_data.json')
         with open(path, 'r') as f:
@@ -407,6 +424,18 @@ class Function:
             data_list[i]['rect'] = [npc.rect.x / screen_width, npc.rect.y / screen_height]
             data_list[i]['status_start'] = npc.status_start
             data_list[i]['status_end'] = npc.status_end
+            i += 1
+        with open(path, 'w') as f:
+            json.dump(data_list, f)
+        # 保存商人信息
+        path = os.path.join('page', current_archival, 'page4', 'floor' + str(page.game_map.height),
+                            'merchant_data.json')
+        with open(path, 'r') as f:
+            data_list = json.load(f)
+        i = 0
+        for merchant in page.merchant:
+            data_list[i]['rect'] = [merchant.rect.x / screen_width, merchant.rect.y / screen_height]
+            data_list[i]['things_kind'] = merchant.store.things_kind
             i += 1
         with open(path, 'w') as f:
             json.dump(data_list, f)

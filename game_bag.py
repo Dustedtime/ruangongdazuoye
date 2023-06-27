@@ -14,6 +14,9 @@ class Bag:  # 背包类
         self.things_kind = None  # 背包各种物品依次的种类
         self.things_images = []  # 背包中物品图像
         self.things_rects = []  # 背包各个格子中物品图像位置
+        self.things_num_words = []  # 背包每个格子内该物品数量的文本
+        self.things_num_font = None  # 背包每个格子内该物品数量的文字字体
+        self.things_num_color = None  # 背包每个格子内该物品数量的文本颜色
 
         self.moving = 0  # 移动背包物品位置的标志
         self.move_enable = 0  # 能否开始移动的标志
@@ -69,6 +72,8 @@ class Bag:  # 背包类
         self.things_kind = data['things_kind']
         self.item_edge = data['item_edge']
         self.item_width = data['item_width']
+        self.things_num_font = pygame.font.SysFont('SimSun', int(data['things_num_font'][0] * screen_height))
+        self.things_num_color = tuple(data['things_num_font'][1])
         self.bag_width_true = self.item_width * 5 + self.item_edge
         self.bag_height_true = self.item_width * 7 + self.item_edge
         self.bag_width = self.images[1][2][0] - self.images[1][1][0]
@@ -101,6 +106,16 @@ class Bag:  # 背包类
                 self.things_num += 1  # 背包内物品数量加一
             else:
                 self.things_images.append(None)
+        # 加载背包每个格子内该物品数量的文本
+        for i in range(self.space):
+            if self.things_kind[i] and self.things_kind[i][-2]:
+                word = self.things_num_font.render(str(self.things_kind[i][-1]), True, self.things_num_color)
+                rect = word.get_rect()
+                rect.right = self.things_rects[i][1][0] - 3
+                rect.bottom = self.things_rects[i][1][1] - 3
+                self.things_num_words.append([word, rect])
+            else:
+                self.things_num_words.append(None)
         # 加载装备被穿戴图标
         path = ''
         for directory in data['equip_image']:
@@ -249,6 +264,16 @@ class Bag:  # 背包类
                                                  self.selecting_words[1][1])
         self.selecting_words[1][3] = text
 
+    def change_things_num_text(self, target):  # 修改格子内物品数量显示文本
+        if self.things_kind[target] and self.things_kind[target][-2] and self.things_kind[target][-1]:
+            word = self.things_num_font.render(str(self.things_kind[target][-1]), True, self.things_num_color)
+            rect = word.get_rect()
+            rect.right = self.things_rects[target][1][0] - 3
+            rect.bottom = self.things_rects[target][1][1] - 3
+            self.things_num_words[target] = [word, rect]
+        else:
+            self.things_num_words[target] = None
+
     def change_selecting_num(self, num):  # 改变选中的物品数量
         if not self.things[self.selecting]:
             return
@@ -335,6 +360,7 @@ class Bag:  # 背包类
             while data:
                 information.append(data[:-1])
                 data = f.readline()
+        information.append("出售价格：")
         if box:
             information.append("丢弃")
         elif merchant:
@@ -449,6 +475,8 @@ class Bag:  # 背包类
             self.things[self.selecting] = None
             self.things_images[self.selecting] = None
             self.things_kind[self.selecting] = []
+        # 更改该格子显示的物品数量
+        self.change_things_num_text(self.selecting)
         self.selecting = -1
         self.showing = -1
 
@@ -502,6 +530,10 @@ class Bag:  # 背包类
         self.things_kind[target] = self.things_kind[self.selecting].copy()
         self.things_kind[target][-1] = self.selecting_num
         self.things_kind[self.selecting][-1] -= self.selecting_num
+        # 修改显示的格子内物品数量信息
+        self.change_things_num_text(self.selecting)
+        self.change_things_num_text(target)
+        # 修改其他信息
         if self.things_kind[self.selecting][-1]:  # 仅移动选中物品的一部分
             self.things_num += 1
             # 调节显示的选中数量文本信息
@@ -560,6 +592,9 @@ class Bag:  # 背包类
         kind = self.things_kind[self.selecting].copy()
         self.things_kind[self.selecting] = self.things_kind[target].copy()
         self.things_kind[target] = kind
+        # 修改格子内物品数量显示文本
+        self.change_things_num_text(self.selecting)
+        self.change_things_num_text(target)
         # 修改选中边框的坐标
         self.selecting = target
         x = col * self.item_width * self.bag_width / self.bag_width_true + self.images[1][1][0]
@@ -576,6 +611,9 @@ class Bag:  # 背包类
             self.things_kind[self.selecting][-1] -= self.selecting_num
             self.things_kind[target][-1] += self.selecting_num
             self.selecting_num = 1
+            # 修改两处格子内物品显示数量文本
+            self.change_things_num_text(self.selecting)
+            self.change_things_num_text(target)
             # 物品全部移过去的情况
             if not self.things_kind[self.selecting][-1]:
                 self.things_num -= 1
@@ -625,6 +663,7 @@ class Bag:  # 背包类
         size = (box.things_rects[target][1][0] - box.things_rects[target][0][0],
                 box.things_rects[target][1][1] - box.things_rects[target][0][1])
         box.things_images[target] = pygame.transform.scale(self.things_images[self.selecting], size)
+        box.change_things_num_text(target)
         # 修改移动后的背包属性
         self.things_kind[self.selecting][-1] -= self.selecting_num
         if not self.things_kind[self.selecting][-1]:
@@ -632,6 +671,8 @@ class Bag:  # 背包类
             self.things_images[self.selecting] = None
             self.things_kind[self.selecting] = []
             self.things_num -= 1
+            self.things_num_words[self.selecting] = None
+        self.change_things_num_text(self.selecting)
         if self.showing == self.selecting:
             self.showing = -1
         self.selecting = -1
@@ -653,6 +694,10 @@ class Bag:  # 背包类
         image = pygame.transform.scale(self.things_images[self.selecting], size_box)
         self.things_images[self.selecting] = pygame.transform.scale(box.things_images[target], size_bag)
         box.things_images[target] = image
+        # 更改背包的格子内物品数量显示文本
+        self.change_things_num_text(self.selecting)
+        # 更改宝箱的格子内物品数量显示文本
+        box.change_things_num_text(target)
         # 更新背包属性
         if self.showing == self.selecting:
             self.showing = -1
@@ -666,14 +711,20 @@ class Bag:  # 背包类
         else:  # 物品可以叠放
             box.things_kind[target][-1] += self.selecting_num
             self.things_kind[self.selecting][-1] -= self.selecting_num
-            if self.things_kind[self.selecting][-1]:  # 仅移动一部分
+            # 更改宝箱的格子内物品数量显示文本
+            box.change_things_num_text(target)
+            # 更改背包的格子内物品数量显示文本
+            self.change_things_num_text(self.selecting)
+            # 仅移动一部分
+            if self.things_kind[self.selecting][-1]:
                 # 调节显示的选中数量文本信息
                 self.selecting_num = 1
                 self.change_selecting_num_text()
                 length = self.selecting_num_image[0][2][0] - self.selecting_num_image[0][1][0] - 1
                 num = self.things_kind[self.selecting][-1]
                 self.selecting_num_image[3][1].centerx = self.selecting_num_image[0][1][0] + length / num
-            else:  # 全部移动过去
+            # 全部移动过去
+            else:
                 self.things[self.selecting] = None
                 self.things_images[self.selecting] = None
                 self.things_kind[self.selecting] = []
