@@ -4,6 +4,7 @@ import os
 import pygame
 
 from game_equipment import Weapon
+from game_thing import Key
 
 
 class Bag:  # 背包类
@@ -181,6 +182,19 @@ class Bag:  # 背包类
                 self.things.append(None)
             elif thing[0] == 1:  # 武器
                 self.things.append(Weapon(thing[1], thing[2], hero_size, hero_rect))
+            elif thing[0] == 4:
+                if thing[1] == 1:
+                    self.things.append(Key())
+
+    def update(self, target):  # 背包物品信息更新，用于某个操作导致背包某物品信息更新后执行
+        if not self.things_kind[target][-1]:
+            self.things[target] = None
+            self.things_images[target] = None
+            self.things_kind[target] = []
+            self.things_num -= 1
+            self.things_num_words[target] = None
+        else:
+            self.change_things_num_text(target)
 
     def draw(self, screen):  # 绘制背包
         for image in self.images:
@@ -373,6 +387,8 @@ class Bag:  # 背包类
                     information.append("装备")
             elif self.things_kind[self.selecting][0] == 3:
                 pass
+            elif self.things_kind[self.selecting][0] == 4:
+                information.append("使用")
         information.append("取消")
         # 读取字体设置的信息
         path2 = os.path.join(path, 'word.json')
@@ -390,7 +406,7 @@ class Bag:  # 背包类
             elif datas[i][4] == 3:
                 pass
             elif datas[i][4] == 4:
-                pass
+                info += str(self.things_kind[self.selecting][-1])
             elif datas[i][4] == 5:
                 info += str(self.things[self.selecting].sell_price)
             words = font.render(info, True, tuple(datas[i][2]))
@@ -402,10 +418,14 @@ class Bag:  # 背包类
                 rect.center = (datas[i][1][0] * screen_width, datas[i][1][1] * screen_height)
             self.show_words.append([words, rect])
 
-    def showing_click_left(self, screen_width, screen_height, box, merchant, hero):  # 查看物品详细信息时点击了操作键
+    def showing_click_left(self, screen_width, screen_height, box, merchant, hero, tip):  # 查看物品详细信息时点击了操作键
         if box:  # 宝箱打开中，左键显示为丢弃
             self.throw(box)
         elif merchant:
+            for i in self.equip_wear:
+                if i == self.selecting:
+                    tip.create_tip("不能卖出穿戴中的装备")
+                    return
             self.sell(merchant, hero, screen_width, screen_height)
         elif self.things_kind[self.showing][0] == 1:  # 查看物品为武器
             if self.equip_wear[0] == self.showing:  # 该武器正被装备，点击后取消装备该武器

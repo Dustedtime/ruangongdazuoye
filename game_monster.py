@@ -73,99 +73,98 @@ class Monster(Creature):  # 定义怪物类
         x_temp = self.rect.x
         y_temp = self.rect.y
         walls = pygame.sprite.spritecollide(self, game_map.walls, False)
-        wall_width = game_map.wall_width
         if self.movey < 0:  # 怪物拥有向上速度
             if self.movex == 0:  # 怪物没有横向速度
                 for wall in walls:  # 进行精灵碰撞检测，如有碰撞则修正坐标
                     if wall:
-                        self.rect.y = wall.rect.y + wall_width
+                        self.rect.y = wall.rect.bottom
                         break
             elif self.movex < 0:  # 怪物拥有向左速度
                 # 怪物斜向移动时，碰撞情况有多种，须分开讨论
                 if len(walls) == 1:  # 仅与一面墙发生碰撞
-                    if self.rect.x - walls[0].rect.x < self.rect.y - walls[0].rect.y:
-                        self.rect.y = walls[0].rect.y + wall_width
-                    elif self.rect.x - walls[0].rect.x > self.rect.y - walls[0].rect.y:
-                        self.rect.x = walls[0].rect.x + wall_width
+                    if walls[0].rect.bottom - self.rect.y < walls[0].rect.right - self.rect.x:
+                        self.rect.y = walls[0].rect.bottom
+                    elif walls[0].rect.bottom - self.rect.y > walls[0].rect.right - self.rect.x:
+                        self.rect.x = walls[0].rect.right
                     else:
-                        self.rect.y = walls[0].rect.y + wall_width
-                        self.rect.x = walls[0].rect.x + wall_width
-                elif len(walls) == 2:  # 与两面墙发生碰撞
-                    if walls[0].rect.x == walls[1].rect.x:
-                        self.rect.x = walls[0].rect.x + wall_width
+                        self.rect.y = walls[0].rect.bottom
+                        self.rect.x = walls[0].rect.right
+                elif len(walls) > 1:  # 与不止一面墙发生碰撞
+                    if min(wall.rect.x for wall in walls) == max(wall.rect.x for wall in walls):
+                        self.rect.x = walls[0].rect.right
+                    elif min(wall.rect.y for wall in walls) == max(wall.rect.y for wall in walls):
+                        self.rect.y = walls[0].rect.bottom
                     else:
-                        self.rect.y = walls[0].rect.y + wall_width
-                elif len(walls) == 3:  # 与三面墙发生碰撞
-                    self.rect.x = (walls[0].rect.x + walls[1].rect.x + walls[2].rect.x + wall_width * 2) // 3
-                    self.rect.y = (walls[0].rect.y + walls[1].rect.y + walls[2].rect.y + wall_width * 2) // 3
+                        self.rect.x = min(wall.rect.right for wall in walls)
+                        self.rect.y = min(wall.rect.bottom for wall in walls)
             else:  # 怪物拥有向右速度
                 if len(walls) == 1:  # 仅与一面墙发生碰撞
-                    if self.rect.x - walls[0].rect.x < walls[0].rect.y - self.rect.y:
-                        self.rect.x = walls[0].rect.x - wall_width
-                    elif self.rect.x - walls[0].rect.x > walls[0].rect.y - self.rect.y:
-                        self.rect.y = walls[0].rect.y + wall_width
+                    if self.rect.right - walls[0].rect.x < walls[0].rect.bottom - self.rect.y:
+                        self.rect.right = walls[0].rect.x
+                    elif self.rect.right - walls[0].rect.x > walls[0].rect.bottom - self.rect.y:
+                        self.rect.y = walls[0].rect.bottom
                     else:
-                        self.rect.y = walls[0].rect.y + wall_width
-                        self.rect.x = walls[0].rect.x - wall_width
-                elif len(walls) == 2:  # 与两面墙发生碰撞
-                    if walls[0].rect.x == walls[1].rect.x:
-                        self.rect.x = walls[0].rect.x - wall_width
+                        self.rect.y = walls[0].rect.bottom
+                        self.rect.right = walls[0].rect.x
+                elif len(walls) > 1:  # 与不止一面墙发生碰撞
+                    if min(wall.rect.x for wall in walls) == max(wall.rect.x for wall in walls):
+                        self.rect.right = walls[0].rect.x
+                    elif min(wall.rect.y for wall in walls) == max(wall.rect.y for wall in walls):
+                        self.rect.y = walls[0].rect.bottom
                     else:
-                        self.rect.y = walls[0].rect.y + wall_width
-                elif len(walls) == 3:  # 与三面墙发生碰撞
-                    self.rect.x = (walls[0].rect.x + walls[1].rect.x + walls[2].rect.x - wall_width * 2) // 3
-                    self.rect.y = (walls[0].rect.y + walls[1].rect.y + walls[2].rect.y + wall_width * 2) // 3
+                        self.rect.right = max(wall.rect.x for wall in walls)
+                        self.rect.y = min(wall.rect.bottom for wall in walls)
         # 下面情况与上面类似，不再注释
         elif self.movey > 0:
             if self.movex == 0:
                 for wall in pygame.sprite.spritecollide(self, game_map.walls, False):
                     if wall:
-                        self.rect.y = wall.rect.y - wall_width
+                        self.rect.bottom = wall.rect.y
                         break
             elif self.movex < 0:
                 if len(walls) == 1:
-                    if self.rect.x - walls[0].rect.x < walls[0].rect.y - self.rect.y:
-                        self.rect.y = walls[0].rect.y - wall_width
-                    elif self.rect.x - walls[0].rect.x > walls[0].rect.y - self.rect.y:
-                        self.rect.x = walls[0].rect.x + wall_width
+                    if self.rect.bottom - walls[0].rect.y < walls[0].rect.right - self.rect.x:
+                        self.rect.bottom = walls[0].rect.y
+                    elif self.rect.bottom - walls[0].rect.y > walls[0].rect.right - self.rect.x:
+                        self.rect.x = walls[0].rect.right
                     else:
-                        self.rect.y = walls[0].rect.y - wall_width
-                        self.rect.x = walls[0].rect.x + wall_width
-                elif len(walls) == 2:
-                    if walls[0].rect.x == walls[1].rect.x:
-                        self.rect.x = walls[0].rect.x + wall_width
+                        self.rect.bottom = walls[0].rect.y
+                        self.rect.x = walls[0].rect.right
+                elif len(walls) > 1:
+                    if min(wall.rect.x for wall in walls) == max(wall.rect.x for wall in walls):
+                        self.rect.x = walls[0].rect.right
+                    elif min(wall.rect.y for wall in walls) == max(wall.rect.y for wall in walls):
+                        self.rect.bottom = walls[0].rect.y
                     else:
-                        self.rect.y = walls[0].rect.y - wall_width
-                elif len(walls) == 3:
-                    self.rect.x = (walls[0].rect.x + walls[1].rect.x + walls[2].rect.x + wall_width * 2) // 3
-                    self.rect.y = (walls[0].rect.y + walls[1].rect.y + walls[2].rect.y - wall_width * 2) // 3
+                        self.rect.x = min(wall.rect.right for wall in walls)
+                        self.rect.bottom = max(wall.rect.y for wall in walls)
             else:
                 if len(walls) == 1:
-                    if self.rect.x - walls[0].rect.x < self.rect.y - walls[0].rect.y:
-                        self.rect.x = walls[0].rect.x - wall_width
-                    elif self.rect.x - walls[0].rect.x > self.rect.y - walls[0].rect.y:
-                        self.rect.y = walls[0].rect.y - wall_width
+                    if self.rect.right - walls[0].rect.x < self.rect.bottom - walls[0].rect.y:
+                        self.rect.right = walls[0].rect.x
+                    elif self.rect.right - walls[0].rect.x > self.rect.bottom - walls[0].rect.y:
+                        self.rect.bottom = walls[0].rect.y
                     else:
-                        self.rect.y = walls[0].rect.y - wall_width
-                        self.rect.x = walls[0].rect.x - wall_width
-                elif len(walls) == 2:
-                    if walls[0].rect.x == walls[1].rect.x:
-                        self.rect.x = walls[0].rect.x - wall_width
+                        self.rect.bottom = walls[0].rect.y
+                        self.rect.right = walls[0].rect.x
+                elif len(walls) > 1:
+                    if min(wall.rect.x for wall in walls) == max(wall.rect.x for wall in walls):
+                        self.rect.right = walls[0].rect.x
+                    elif min(wall.rect.y for wall in walls) == max(wall.rect.y for wall in walls):
+                        self.rect.bottom = walls[0].rect.y
                     else:
-                        self.rect.y = walls[0].rect.y - wall_width
-                elif len(walls) == 3:
-                    self.rect.x = (walls[0].rect.x + walls[1].rect.x + walls[2].rect.x - wall_width * 2) // 3
-                    self.rect.y = (walls[0].rect.y + walls[1].rect.y + walls[2].rect.y - wall_width * 2) // 3
+                        self.rect.right = max(wall.rect.x for wall in walls)
+                        self.rect.bottom = max(wall.rect.y for wall in walls)
         else:
             if self.movex < 0:
                 for wall in pygame.sprite.spritecollide(self, game_map.walls, False):
                     if wall:
-                        self.rect.x = wall.rect.x + wall_width
+                        self.rect.x = wall.rect.right
                         break
             elif self.movex > 0:
                 for wall in pygame.sprite.spritecollide(self, game_map.walls, False):
                     if wall:
-                        self.rect.x = wall.rect.x - wall_width
+                        self.rect.right = wall.rect.x
                         break
             else:
                 if self.flying:  # 怪物属于飞行种类，悬停时仍然刷新帧率，形成飞行效果
@@ -217,28 +216,44 @@ class Monster(Creature):  # 定义怪物类
             self.chasing = 0
         if self.chasing:  # 怪物跟随角色
             chasing_enable = 1
-            x_min = min(hero_rect.centerx, self.rect.centerx) - game_map.left
-            x_max = max(hero_rect.centerx, self.rect.centerx) - game_map.left
-            y_min = min(hero_rect.centery, self.rect.centery) - game_map.top
-            y_max = max(hero_rect.centery, self.rect.centery) - game_map.top
-            x_gap = x_max - x_min
-            y_gap = y_max - y_min
+            # 判断怪物和英雄之间是否隔墙
+            x_gap = hero_rect.centerx - self.rect.centerx
+            y_gap = hero_rect.centery - self.rect.centery
+            x_monster = self.rect.centerx - game_map.left
+            y_monster = self.rect.centery - game_map.top
+            x_hero = hero_rect.centerx - game_map.left
+            y_hero = hero_rect.centery - game_map.top
             width = game_map.wall_width
             if x_gap == 0 and y_gap == 0:
                 self.follow(hero_rect)
                 return
-            elif x_gap >= y_gap:
-                x_div = self.chasing_gap
+            elif abs(x_gap) >= abs(y_gap):
+                if x_gap < 0:
+                    x_div = -self.chasing_gap
+                else:
+                    x_div = self.chasing_gap
                 y_div = y_gap * x_div / x_gap
             else:
-                y_div = self.chasing_gap
+                if y_gap < 0:
+                    y_div = -self.chasing_gap
+                else:
+                    y_div = self.chasing_gap
                 x_div = x_gap * y_div / y_gap
-            while x_min <= x_max and y_min <= y_max:
-                if game_map.layout_data[int(y_min // width)][int(x_min // width)]:
+            while True:
+                if x_div < 0 and y_div < 0 and (x_monster < x_hero or y_monster < y_hero):
+                    break
+                elif x_div < 0 <= y_div and (x_monster < x_hero or y_monster > y_hero):
+                    break
+                elif x_div >= 0 > y_div and (x_monster > x_hero or y_monster < y_hero):
+                    break
+                elif x_div >= 0 and y_div >= 0 and (x_monster > x_hero or y_monster > y_hero):
+                    break
+                # 隔墙，追踪标志置零
+                if game_map.layout_data[int(y_monster // width)][int(x_monster // width)]:
                     chasing_enable = 0
                     break
-                x_min += x_div
-                y_min += y_div
+                x_monster += x_div
+                y_monster += y_div
             if chasing_enable:
                 self.follow(hero_rect)
                 return
@@ -255,17 +270,25 @@ class Monster(Creature):  # 定义怪物类
     def follow(self, hero_rect):  # 怪物发现角色后的移动
         hero_x, hero_y = hero_rect.centerx, hero_rect.centery
         monster_x, monster_y = self.rect.centerx, self.rect.centery
+        x_gap = abs(hero_x - monster_x)
+        y_gap = abs(hero_y - monster_y)
         if self.chasing == 1:  # 追逐
-            if monster_x + self.speed <= hero_x:
-                self.movex = self.speed
-            elif monster_x - self.speed >= hero_x:
-                self.movex = -self.speed
+            if x_gap >= y_gap:
+                speed_x = self.speed
+                speed_y = speed_x * y_gap / x_gap
+            else:
+                speed_y = self.speed
+                speed_x = speed_y * x_gap / y_gap
+            if monster_x + speed_x <= hero_x:
+                self.movex = speed_x
+            elif monster_x - speed_x >= hero_x:
+                self.movex = -speed_x
             else:
                 self.movex = hero_x - monster_x
-            if monster_y + self.speed <= hero_y:
-                self.movey = self.speed
-            elif monster_y - self.speed >= hero_y:
-                self.movey = -self.speed
+            if monster_y + speed_y <= hero_y:
+                self.movey = speed_y
+            elif monster_y - speed_y >= hero_y:
+                self.movey = -speed_y
             else:
                 self.movey = hero_y - monster_y
         elif self.chasing == 2:  # 站定攻击

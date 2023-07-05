@@ -11,7 +11,6 @@ from game_maps import Map
 from game_merchant import Merchant
 from game_monster import Monster
 from game_npc import NPC
-from game_tip import Tip
 
 
 class Function:
@@ -265,10 +264,10 @@ class Function:
         current_archival[1] = ''
 
     @staticmethod
-    def enter_game(page, num):  # 初始化相关信息并进入游戏
+    def enter_game(page, num, change):  # 初始化相关信息并进入游戏
         page.current_archival = [num, page.archival[num]]  # 更新当前游戏中的存档信息
-        # 实例化地图
         archival_path = os.path.join('page', page.current_archival[-1], 'page4')
+        # 实例化地图
         with open(os.path.join(archival_path, 'floor_data.json'), 'r') as f:
             dictionary = json.load(f)
             dictionary_temp = dictionary.copy()
@@ -277,10 +276,23 @@ class Function:
                 dictionary_temp.update(json.load(f))
         page.game_map = Map(dictionary_temp, page.setting.screen_width, page.setting.screen_height)
         # 实例化角色
-        with open(os.path.join(archival_path, 'player', 'player_data.json'), 'r') as f:
-            dictionary = json.load(f)
-        page.hero = Hero(dictionary, page.setting, page.setting.screen_width, page.setting.screen_height,
-                         page.current_archival[1])
+        if not change:
+            with open(os.path.join(archival_path, 'player', 'player_data.json'), 'r') as f:
+                dictionary = json.load(f)
+            page.hero = Hero(dictionary, page.setting, page.setting.screen_width, page.setting.screen_height,
+                             page.current_archival[1])
+        if dictionary_temp['hero_rect_init_sign'] == 0 or dictionary_temp['hero_rect_init_sign'] == 1:
+            page.hero.rect.y = dictionary_temp['hero_rect'][1][0] * page.setting.screen_height + \
+                               dictionary_temp['hero_rect'][1][1] * page.game_map.wall_width
+        else:
+            page.hero.rect.bottom = dictionary_temp['hero_rect'][1][0] * page.setting.screen_height + \
+                                    dictionary_temp['hero_rect'][1][1] * page.game_map.wall_width
+        if dictionary_temp['hero_rect_init_sign'] == 0 or dictionary_temp['hero_rect_init_sign'] == 2:
+            page.hero.rect.x = dictionary_temp['hero_rect'][0][0] * page.setting.screen_width + \
+                               dictionary_temp['hero_rect'][0][1] * page.game_map.wall_width
+        else:
+            page.hero.rect.right = dictionary_temp['hero_rect'][0][0] * page.setting.screen_width + \
+                                   dictionary_temp['hero_rect'][0][1] * page.game_map.wall_width
         # 实例化怪物
         data = []
         path = os.path.join(archival_path, 'floor' + str(page.game_map.height), 'monster_data.json')
@@ -320,7 +332,9 @@ class Function:
             page.merchant.add(Merchant(dictionary, page.setting, page.hero.size[0], page.hero.rect))
         # 实例化伤害显示
         page.harm = Harm(page.setting.screen_height)
-        page.update_page_type(4)
+        if not change:
+            page.update_page_type(4)
+        page.tip.create_tip("第" + str(page.game_map.height) + "层")
 
     @staticmethod
     def box_merchant_check(boxes, merchants):  # 检测宝箱以及商人的状态，返回此刻交互中的宝箱或商人（无交互则返回None）
@@ -335,12 +349,51 @@ class Function:
                 break
         return box_check, merchant_check
 
+    def change_floor(self, page, change):  # 更改当前地图层数
+        self.save_progress(page, change)
+        self.enter_game(page, page.current_archival[0], change)
+
     @staticmethod
-    def save_progress(page):  # 保存游戏进度
+    def open_door_enable_check(pos, hero, game_map):  # 判断角色与门之间的距离是否满足可开门的条件，根据判断结果返回相应坐标
+        x_gap = abs(pos[0] - hero.rect.centerx)
+        y_gap = abs(pos[1] - hero.rect.centery)
+        if x_gap < hero.door_enable and y_gap < hero.door_enable:
+            y = int((pos[1] - game_map.top) // game_map.wall_width)
+            x = int((pos[0] - game_map.left) // game_map.wall_width)
+            return x, y
+        else:
+            return -1, -1
+
+    @staticmethod
+    def end_die(page):  # 角色死亡，结束游戏
+        # 删除游戏内实例化对象
+        page.hero.bullets = pygame.sprite.Group()
+        page.hero.sword_attack = pygame.sprite.Group()
+        page.monster = pygame.sprite.Group()
+        page.monster_bullets = pygame.sprite.Group()
+        page.npc = pygame.sprite.Group()
+        page.merchant = pygame.sprite.Group()
+        page.box = pygame.sprite.Group()
+        page.game_map = None
+
+    @staticmethod
+    def end_win(page):  # 胜利
+        # 删除游戏内实例化对象
+        page.hero.bullets = pygame.sprite.Group()
+        page.hero.sword_attack = pygame.sprite.Group()
+        page.monster = pygame.sprite.Group()
+        page.monster_bullets = pygame.sprite.Group()
+        page.npc = pygame.sprite.Group()
+        page.merchant = pygame.sprite.Group()
+        page.box = pygame.sprite.Group()
+        page.game_map = None
+
+    @staticmethod
+    def save_progress(page, change):  # 保存游戏进度
         screen_width, screen_height = page.setting.screen_width, page.setting.screen_height
         current_archival = page.current_archival[1]  # 获取当前存档名
         # 保存游戏地图相关信息
-        data = {"height": page.game_map.height}
+        data = {"height": page.game_map.height + change}
         with open(os.path.join('page', current_archival, 'page4', 'floor_data.json'), 'w') as f:  # 保存当前地图层数
             json.dump(data, f)
         path = os.path.join('page', current_archival, 'page4', 'floor' + str(page.game_map.height), 'map_data.json')
@@ -351,47 +404,50 @@ class Function:
         data["right"] = [page.game_map.right / screen_width, 0]
         data["top"] = [page.game_map.top / screen_height, 0]
         data["bottom"] = [page.game_map.bottom / screen_height, 0]
+        data['hero_rect_init_sign'] = 0
+        data['hero_rect'] = [[page.hero.rect.x / screen_width, 0], [page.hero.rect.y / screen_height, 0]]
         with open(path, 'w') as f:
             json.dump(data, f)
         # 保存英雄数据
-        path = os.path.join('page', current_archival, 'page4', 'player', 'player_data.json')
-        with open(path, 'r') as f:
-            data = json.load(f)
-        data['health'] = page.hero.health
-        data['strength'] = page.hero.strength
-        data['defence'] = page.hero.defence
-        data['speed'] = page.hero.speed / screen_height
-        data['money'] = page.hero.money
-        data['exp'] = page.hero.exp
-        data['rect'] = [page.hero.rect.x / screen_width, page.hero.rect.y / screen_height]
-        data['max_health'] = page.hero.max_health
-        data['level'] = page.hero.level
-        data['max_exp'] = page.hero.max_exp
-        with open(path, 'w') as f:
-            json.dump(data, f)
-        # 保存背包信息
-        path = os.path.join('page', current_archival, 'page4', 'bag', 'bag_data.json')
-        with open(path, 'r') as f:
-            data = json.load(f)
-        data['equip_wear'] = page.hero.bag.equip_wear
-        data['things_kind'] = page.hero.bag.things_kind
-        with open(path, 'w') as f:
-            json.dump(data, f)
+        if not change:
+            path = os.path.join('page', current_archival, 'page4', 'player', 'player_data.json')
+            with open(path, 'r') as f:
+                data = json.load(f)
+            data['health'] = page.hero.health
+            data['strength'] = page.hero.strength
+            data['defence'] = page.hero.defence
+            data['speed'] = page.hero.speed / screen_height
+            data['money'] = page.hero.money
+            data['exp'] = page.hero.exp
+            data['max_health'] = page.hero.max_health
+            data['level'] = page.hero.level
+            data['max_exp'] = page.hero.max_exp
+            with open(path, 'w') as f:
+                json.dump(data, f)
+            # 保存背包信息
+            path = os.path.join('page', current_archival, 'page4', 'bag', 'bag_data.json')
+            with open(path, 'r') as f:
+                data = json.load(f)
+            data['equip_wear'] = page.hero.bag.equip_wear
+            data['things_kind'] = page.hero.bag.things_kind
+            with open(path, 'w') as f:
+                json.dump(data, f)
         # 保存宝箱信息
-        path = os.path.join('page', current_archival, 'page4', 'floor' + str(page.game_map.height), 'box_data.json')
-        with open(path, 'r') as f:
-            data_list = json.load(f)
-        box_num = len(data_list)
-        i = 0
-        for box in page.box:
-            if i == box_num:
-                data_list.append(data_list[-1].copy())
-                box_num += 1
-            data_list[i]['rect'] = [box.rect.x / screen_width, box.rect.y / screen_height]
-            data_list[i]['things_kind'] = box.things_kind
-            i += 1
-        with open(path, 'w') as f:
-            json.dump(data_list, f)
+        if page.box:
+            path = os.path.join('page', current_archival, 'page4', 'floor' + str(page.game_map.height), 'box_data.json')
+            with open(path, 'r') as f:
+                data_list = json.load(f)
+            box_num = len(data_list)
+            i = 0
+            for box in page.box:
+                if i == box_num:
+                    data_list.append(data_list[-1].copy())
+                    box_num += 1
+                data_list[i]['rect'] = [box.rect.x / screen_width, box.rect.y / screen_height]
+                data_list[i]['things_kind'] = box.things_kind
+                i += 1
+            with open(path, 'w') as f:
+                json.dump(data_list, f)
         # 保存怪物信息
         path = os.path.join('page', current_archival, 'page4', 'floor' + str(page.game_map.height), 'monster_data.json')
         with open(path, 'r') as f:
@@ -416,38 +472,44 @@ class Function:
         with open(path, 'w') as f:
             json.dump(data_list, f)
         # 保存npc信息
-        path = os.path.join('page', current_archival, 'page4', 'floor' + str(page.game_map.height), 'npc_data.json')
-        with open(path, 'r') as f:
-            data_list = json.load(f)
-        i = 0
-        for npc in page.npc:
-            data_list[i]['rect'] = [npc.rect.x / screen_width, npc.rect.y / screen_height]
-            data_list[i]['status_start'] = npc.status_start
-            data_list[i]['status_end'] = npc.status_end
-            i += 1
-        with open(path, 'w') as f:
-            json.dump(data_list, f)
+        if page.npc:
+            path = os.path.join('page', current_archival, 'page4', 'floor' + str(page.game_map.height), 'npc_data.json')
+            with open(path, 'r') as f:
+                data_list = json.load(f)
+            i = 0
+            for npc in page.npc:
+                data_list[i]['rect'] = [npc.rect.x / screen_width, npc.rect.y / screen_height]
+                data_list[i]['status_start'] = npc.status_start
+                data_list[i]['status_end'] = npc.status_end
+                i += 1
+            with open(path, 'w') as f:
+                json.dump(data_list, f)
         # 保存商人信息
-        path = os.path.join('page', current_archival, 'page4', 'floor' + str(page.game_map.height),
-                            'merchant_data.json')
-        with open(path, 'r') as f:
-            data_list = json.load(f)
-        i = 0
-        for merchant in page.merchant:
-            data_list[i]['rect'] = [merchant.rect.x / screen_width, merchant.rect.y / screen_height]
-            data_list[i]['things_kind'] = merchant.store.things_kind
-            i += 1
-        with open(path, 'w') as f:
-            json.dump(data_list, f)
+        if page.merchant:
+            path = os.path.join('page', current_archival, 'page4', 'floor' + str(page.game_map.height),
+                                'merchant_data.json')
+            with open(path, 'r') as f:
+                data_list = json.load(f)
+            i = 0
+            for merchant in page.merchant:
+                data_list[i]['rect'] = [merchant.rect.x / screen_width, merchant.rect.y / screen_height]
+                data_list[i]['things_kind'] = merchant.store.things_kind
+                i += 1
+            with open(path, 'w') as f:
+                json.dump(data_list, f)
         # 删除游戏内实例化对象
-        page.hero = None
+        page.hero.bullets = pygame.sprite.Group()
+        page.hero.sword_attack = pygame.sprite.Group()
         page.monster = pygame.sprite.Group()
         page.monster_bullets = pygame.sprite.Group()
         page.npc = pygame.sprite.Group()
         page.merchant = pygame.sprite.Group()
         page.box = pygame.sprite.Group()
         page.game_map = None
-        page.current_archival = [-1, '']
+        if not change:
+            page.current_archival = [-1, '']
+            page.hero = None
+            page.tip.create_tip("游戏进度已保存")
         pass
 
     @staticmethod

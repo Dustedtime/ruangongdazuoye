@@ -18,22 +18,35 @@ class Map:  # 游戏地图类
         self.right_min = dictionary['right_min'] * screen_width
         self.top_max = dictionary['top_max'] * screen_height
         self.bottom_min = dictionary['bottom_min'] * screen_height
-        self.walls = pygame.sprite.Group()  # 建立墙精灵组
-        self.doors = pygame.sprite.Group()
-        self.stairs = pygame.sprite.Group()
+        self.walls = None
+        self.doors = None
+        self.stairs = None
         self.init_layout()  # 根据地图布局初始化地图
 
     def init_layout(self):  # 初始化地图
+        self.walls = pygame.sprite.Group()
+        self.doors = pygame.sprite.Group()
+        self.stairs = pygame.sprite.Group()
         for i in range(len(self.layout_data)):
             for j in range(len(self.layout_data[i])):
-                if self.layout_data[i][j] == 1:
-                    wall = Wall((self.left + self.wall_width * j, self.top + self.wall_width * i),
-                                (self.wall_width, self.wall_width))
+                if self.layout_data[i][j] == 1 or self.layout_data[i][j] == 2:
+                    location = (self.left + self.wall_width * j, self.top + self.wall_width * i)
+                    size = (self.wall_width, self.wall_width)
                     # noinspection PyTypeChecker
-                    self.walls.add(wall)
+                    self.walls.add(Wall(location, size))  # 实例化墙
+                    if self.layout_data[i][j] == 2:
+                        # noinspection PyTypeChecker
+                        self.doors.add(Door(location, size))  # 实例化门
+                elif self.layout_data[i][j] == 3 or self.layout_data[i][j] == 4:
+                    location = (self.left + self.wall_width * j, self.top + self.wall_width * i)
+                    size = (self.wall_width, self.wall_width)
+                    # noinspection PyTypeChecker
+                    self.stairs.add(Stairs(location, size))  # 实例化楼梯
 
     def update(self, x, y):  # 更新场景中除角色外所有对象坐标
         self.walls.update(x, y)
+        self.doors.update(x, y)
+        self.stairs.update(x, y)
         self.left += x
         self.right += x
         self.top += y
@@ -42,6 +55,8 @@ class Map:  # 游戏地图类
     def draw(self, screen):  # 更新场景中除角色外所有对象图像
         screen.fill((200, 200, 100))
         self.walls.draw(screen)
+        self.stairs.draw(screen)
+        self.doors.draw(screen)
 
 
 class Wall(pygame.sprite.Sprite):  # 定义墙类
@@ -53,5 +68,31 @@ class Wall(pygame.sprite.Sprite):  # 定义墙类
         self.rect.topleft = location
 
     def update(self, x, y):  # 更新墙坐标
+        self.rect.x += x
+        self.rect.y += y
+
+
+class Door(pygame.sprite.Sprite):  # 定义门类
+    def __init__(self, location, size):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.transform.scale(pygame.image.load(os.path.join('image', 'page4', 'map', 'door.bmp')), size)
+        self.image.convert_alpha()
+        self.rect = self.image.get_rect()
+        self.rect.topleft = location
+
+    def update(self, x, y):  # 更新门坐标
+        self.rect.x += x
+        self.rect.y += y
+
+
+class Stairs(pygame.sprite.Sprite):  # 定义楼梯类
+    def __init__(self, location, size):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.transform.scale(pygame.image.load(os.path.join('image', 'page4', 'map', 'stair.bmp')), size)
+        self.image.convert_alpha()
+        self.rect = self.image.get_rect()
+        self.rect.topleft = location
+
+    def update(self, x, y):  # 更新楼梯坐标
         self.rect.x += x
         self.rect.y += y

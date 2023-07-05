@@ -4,6 +4,7 @@ import os
 import pygame
 
 from game_equipment import Weapon
+from game_thing import Key
 
 
 class Box(pygame.sprite.Sprite):  # 宝箱类
@@ -181,6 +182,9 @@ class Box(pygame.sprite.Sprite):  # 宝箱类
                 self.things.append(None)
             elif thing[0] == 1:  # 武器
                 self.things.append(Weapon(thing[1], thing[2], hero_size, hero_rect))
+            elif thing[0] == 4:  # 道具
+                if thing[1] == 1:  # 钥匙
+                    self.things.append(Key())
 
     def update(self, x, y, hero):  # 更新宝箱位置以及状态
         self.rect.x += x
@@ -383,7 +387,7 @@ class Box(pygame.sprite.Sprite):  # 宝箱类
             elif datas[i][4] == 3:
                 pass
             elif datas[i][4] == 4:
-                pass
+                info += str(self.things_kind[self.selecting][-1])
             elif datas[i][4] == 5:
                 info += str(self.things[self.selecting].sell_price)
             words = font.render(info, True, tuple(datas[i][2]))

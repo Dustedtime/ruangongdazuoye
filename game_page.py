@@ -46,7 +46,6 @@ class Page:  # 定义页面类
         # 加载页面后续要显示文字
         self.functions.load_page_word_after(route_common, screen_width, screen_height, self.words_after)
         self.words_after_num = 0
-        pass  # 需完善角色、敌人等对象的更新
 
     def update_page_type(self, page_kind):  # 更新页面编号
         self.page_kind = page_kind
@@ -59,8 +58,8 @@ class Page:  # 定义页面类
             self.screen.blit(word[0], word[1])
         self.tip.update()
         if self.game_map:
-            self.update_game_scene()  # 更新游戏数据
             self.draw_game_scene()  # 更新游戏画面
+            self.update_game_scene()  # 更新游戏数据
         self.tip.draw(self.screen)
 
     def update_game_scene(self):  # 更新游戏画面
@@ -97,6 +96,10 @@ class Page:  # 定义页面类
         self.merchant.update(x_change, y_change, self.hero)
         # 更新宝箱位置和状态
         self.box.update(x_change, y_change, self.hero)
+        if self.hero.health <= 0:
+            self.functions.end_die(self)  # 角色死亡
+            self.update_page_type(0)  # 返回主菜单
+            self.tip.create_tip("你已死亡，下次进入游戏将会从最近存档处开始")
 
     def draw_game_scene(self):  # 依次绘制屏幕的所有元素
         self.game_map.draw(self.screen)
@@ -185,7 +188,7 @@ class Page:  # 定义页面类
             num = (event.pos[1] - 90) // 200
             if event.button == 1:
                 if self.archival[num] != "New Game":  # 选中存档不为空，读取存档并进入游戏页面
-                    self.functions.enter_game(self, num)
+                    self.functions.enter_game(self, num, 0)
                     self.update_page_type(4)
                 else:  # 选中存档为空，进入创建存档页面
                     self.current_archival[0] = num
@@ -223,14 +226,19 @@ class Page:  # 定义页面类
         if self.images[0][1][0] <= event.pos[0] < self.images[0][2][0] and self.images[0][1][1] <= event.pos[1] < \
                 self.images[0][2][1]:
             if self.hero.bag.showing < 0 and not box and not merchant:
-                self.functions.save_progress(self)  # 保存游戏进度
+                self.functions.save_progress(self, 0)  # 保存游戏进度
                 self.update_page_type(0)  # 返回主菜单
                 return
-        # 角色攻击
-        elif self.game_map.left_max <= event.pos[0] < self.game_map.right_min and self.game_map.top_max <= \
-                event.pos[1] < self.game_map.bottom_min and self.hero.bag.showing < 0 and not box and not merchant:
-            self.hero.attack(self.setting.screen_height, event.pos)
-            self.hero.bag.selecting = -1
+        # 角色开门或攻击
+        elif self.hero.bag.showing < 0 and not box and not merchant and self.game_map.left_max <= \
+                event.pos[0] < self.game_map.right_min and self.game_map.top_max <= event.pos[1] < \
+                self.game_map.bottom_min:
+            # 鼠标点击位置在地图中的横纵数组下标
+            x, y = self.functions.open_door_enable_check(event.pos, self.hero, self.game_map)
+            if x >= 0 and self.game_map.layout_data[y][x] == 2:  # 开门
+                self.hero.unlock(x, y, self.tip, self.game_map)
+            else:  # 攻击
+                self.hero.attack(self.setting.screen_height, event.pos)
         # 选中背包物品
         elif self.hero.bag.images[1][1][0] <= event.pos[0] < self.hero.bag.images[1][2][0] and \
                 self.hero.bag.images[1][1][1] <= event.pos[1] < self.hero.bag.images[1][2][1]:
@@ -292,7 +300,7 @@ class Page:  # 定义页面类
                 self.hero.bag.show_words[-2][1].bottomright[0] and self.hero.bag.show_words[-2][1].topleft[1] <= \
                 event.pos[1] < self.hero.bag.show_words[-2][1].bottomright[1]:
             self.hero.bag.showing_click_left(self.setting.screen_width, self.setting.screen_height, box, merchant,
-                                             self.hero)
+                                             self.hero, self.tip)
             if not box and not merchant:
                 self.hero.load_equipment()  # 更新英雄持有的武器
         # 点击背包物品详情界面的右边，即退出查看
@@ -449,6 +457,7 @@ class Page:  # 定义页面类
                 if box.open_enable:
                     box.opening = 1
                     return  # 打开宝箱后直接结束该函数，防止同时打开多个宝箱或与商人进行交易（即宝箱优先级最高，下面类似）
+            # 检测是否打开商店
             for merchant in self.merchant:
                 if merchant.trade_enable:
                     merchant.trading = 1
@@ -456,6 +465,14 @@ class Page:  # 定义页面类
             for npc in self.npc:
                 if npc.talk_enable:  # 检测npc是否可以交谈
                     npc.talk()  # 与npc进行交谈
+                    return
+            if self.hero.stair_status:  # demo版游戏结束设置
+                if self.game_map.height + self.hero.stair_status == 4:
+                    self.functions.end_win(self)
+                    self.update_page_type(0)  # 返回主菜单
+                    self.tip.create_tip("恭喜你胜利了，非常简陋的测试版到此结束！")
+                    return
+                self.functions.change_floor(self, self.hero.stair_status)
 
     def key_up_page(self, event):  # 键盘按键松开
         if self.page_kind == 4:

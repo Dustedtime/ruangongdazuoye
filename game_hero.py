@@ -15,6 +15,8 @@ class Hero(Creature):  # 角色类
         self.max_health = dictionary['max_health']  # 最大生命值
         self.max_exp = dictionary['max_exp']  # 当前等级升级需要最大经验值
         self.choose = 0  # 武器帧数选择
+        self.stair_status = 0  # 角色靠近楼梯标号（决定按下空格键是上楼梯、下楼梯还是无操作）
+        self.door_enable = 1.5 * self.size[0]  # 角色最远开门距离
 
         self.left_max = dictionary['left_max'] * screen_width  # 向左移动时触发地图移动的极限坐标，下面三个类似
         self.right_min = dictionary['right_min'] * screen_width
@@ -52,53 +54,53 @@ class Hero(Creature):  # 角色类
         self.rect.y = self.rect.y + self.movey
 
         # 下面依次从各种情况判断角色与墙的碰撞情况，修正角色坐标，以避免卡墙
-        wall_width = game_map.wall_width
-        if self.movey < 0:  # 角色拥有向下速度
+        if self.movey < 0:  # 角色拥有向上速度
             self.frame += 1  # 调节角色图像所在帧
             if self.frame >= 4 * ani:
                 self.frame = 0
             self.image = self.images[self.frame // ani + 12]
             if self.movex == 0:  # 角色没有横向速度
                 for wall in pygame.sprite.spritecollide(self, game_map.walls, False):  # 进行精灵碰撞检测，如有碰撞则修正坐标
-                    self.rect.y = wall.rect.y + wall_width
+                    self.rect.y = wall.rect.bottom
+                    break
             elif self.movex < 0:  # 角色拥有向左速度
                 self.image = self.images[self.frame // ani + 4]
                 walls = pygame.sprite.spritecollide(self, game_map.walls, False)  # 角色斜向移动时，碰撞情况有多种，须分开讨论
                 if len(walls) == 1:  # 仅与一面墙发生碰撞
-                    if self.rect.x - walls[0].rect.x < self.rect.y - walls[0].rect.y:
-                        self.rect.y = walls[0].rect.y + wall_width
-                    elif self.rect.x - walls[0].rect.x > self.rect.y - walls[0].rect.y:
-                        self.rect.x = walls[0].rect.x + wall_width
+                    if walls[0].rect.right - self.rect.x < walls[0].rect.bottom - self.rect.y:
+                        self.rect.x = walls[0].rect.right
+                    elif walls[0].rect.right - self.rect.x > walls[0].rect.bottom - self.rect.y:
+                        self.rect.y = walls[0].rect.bottom
                     else:
-                        self.rect.y = walls[0].rect.y + wall_width
-                        self.rect.x = walls[0].rect.x + wall_width
-                elif len(walls) == 2:  # 与两面墙发生碰撞
-                    if walls[0].rect.x == walls[1].rect.x:
-                        self.rect.x = walls[0].rect.x + wall_width
+                        self.rect.y = walls[0].rect.bottom
+                        self.rect.x = walls[0].rect.right
+                elif len(walls) > 1:  # 与不止一面墙发生碰撞
+                    if min(wall.rect.x for wall in walls) == max(wall.rect.x for wall in walls):
+                        self.rect.x = walls[0].rect.right
+                    elif min(wall.rect.y for wall in walls) == max(wall.rect.y for wall in walls):
+                        self.rect.y = walls[0].rect.bottom
                     else:
-                        self.rect.y = walls[0].rect.y + wall_width
-                elif len(walls) == 3:  # 与三面墙发生碰撞
-                    self.rect.x = (walls[0].rect.x + walls[1].rect.x + walls[2].rect.x + wall_width * 2) // 3
-                    self.rect.y = (walls[0].rect.y + walls[1].rect.y + walls[2].rect.y + wall_width * 2) // 3
+                        self.rect.x = min(wall.rect.right for wall in walls)
+                        self.rect.y = min(wall.rect.bottom for wall in walls)
             else:  # 角色拥有向右速度
                 self.image = self.images[self.frame // ani + 8]
                 walls = pygame.sprite.spritecollide(self, game_map.walls, False)
                 if len(walls) == 1:  # 仅与一面墙发生碰撞
-                    if self.rect.x - walls[0].rect.x < walls[0].rect.y - self.rect.y:
-                        self.rect.x = walls[0].rect.x - wall_width
-                    elif self.rect.x - walls[0].rect.x > walls[0].rect.y - self.rect.y:
-                        self.rect.y = walls[0].rect.y + wall_width
+                    if self.rect.right - walls[0].rect.x < walls[0].rect.bottom - self.rect.y:
+                        self.rect.right = walls[0].rect.x
+                    elif self.rect.right - walls[0].rect.x > walls[0].rect.bottom - self.rect.y:
+                        self.rect.y = walls[0].rect.bottom
                     else:
-                        self.rect.y = walls[0].rect.y + wall_width
-                        self.rect.x = walls[0].rect.x - wall_width
-                elif len(walls) == 2:  # 与两面墙发生碰撞
-                    if walls[0].rect.x == walls[1].rect.x:
-                        self.rect.x = walls[0].rect.x - wall_width
+                        self.rect.y = walls[0].rect.bottom
+                        self.rect.right = walls[0].rect.x
+                elif len(walls) > 1:  # 与不止一面墙发生碰撞
+                    if min(wall.rect.x for wall in walls) == max(wall.rect.x for wall in walls):
+                        self.rect.right = walls[0].rect.x
+                    elif min(wall.rect.y for wall in walls) == max(wall.rect.y for wall in walls):
+                        self.rect.y = walls[0].rect.bottom
                     else:
-                        self.rect.y = walls[0].rect.y + wall_width
-                elif len(walls) == 3:  # 与三面墙发生碰撞
-                    self.rect.x = (walls[0].rect.x + walls[1].rect.x + walls[2].rect.x - wall_width * 2) // 3
-                    self.rect.y = (walls[0].rect.y + walls[1].rect.y + walls[2].rect.y + wall_width * 2) // 3
+                        self.rect.right = max(wall.rect.x for wall in walls)
+                        self.rect.y = min(wall.rect.bottom for wall in walls)
         # 下面情况与上面类似，不再注释
         elif self.movey > 0:
             self.frame += 1
@@ -107,45 +109,46 @@ class Hero(Creature):  # 角色类
             self.image = self.images[self.frame // ani]
             if self.movex == 0:
                 for wall in pygame.sprite.spritecollide(self, game_map.walls, False):
-                    self.rect.y = wall.rect.y - wall_width
+                    self.rect.bottom = wall.rect.y
+                    break
             elif self.movex < 0:
                 self.image = self.images[self.frame // ani + 4]
                 walls = pygame.sprite.spritecollide(self, game_map.walls, False)
                 if len(walls) == 1:
-                    if self.rect.x - walls[0].rect.x < walls[0].rect.y - self.rect.y:
-                        self.rect.y = walls[0].rect.y - wall_width
-                    elif self.rect.x - walls[0].rect.x > walls[0].rect.y - self.rect.y:
-                        self.rect.x = walls[0].rect.x + wall_width
+                    if self.rect.bottom - walls[0].rect.y < walls[0].rect.right - self.rect.x:
+                        self.rect.bottom = walls[0].rect.y
+                    elif self.rect.bottom - walls[0].rect.y > walls[0].rect.right - self.rect.x:
+                        self.rect.x = walls[0].rect.right
                     else:
-                        self.rect.y = walls[0].rect.y - wall_width
-                        self.rect.x = walls[0].rect.x + wall_width
-                elif len(walls) == 2:
-                    if walls[0].rect.x == walls[1].rect.x:
-                        self.rect.x = walls[0].rect.x + wall_width
+                        self.rect.bottom = walls[0].rect.y
+                        self.rect.x = walls[0].rect.right
+                elif len(walls) > 1:
+                    if min(wall.rect.x for wall in walls) == max(wall.rect.x for wall in walls):
+                        self.rect.x = walls[0].rect.right
+                    elif min(wall.rect.y for wall in walls) == max(wall.rect.y for wall in walls):
+                        self.rect.bottom = walls[0].rect.y
                     else:
-                        self.rect.y = walls[0].rect.y - wall_width
-                elif len(walls) == 3:
-                    self.rect.x = (walls[0].rect.x + walls[1].rect.x + walls[2].rect.x + wall_width * 2) // 3
-                    self.rect.y = (walls[0].rect.y + walls[1].rect.y + walls[2].rect.y - wall_width * 2) // 3
+                        self.rect.x = min(wall.rect.right for wall in walls)
+                        self.rect.bottom = max(wall.rect.y for wall in walls)
             else:
                 self.image = self.images[self.frame // ani + 8]
                 walls = pygame.sprite.spritecollide(self, game_map.walls, False)
                 if len(walls) == 1:
-                    if self.rect.x - walls[0].rect.x < self.rect.y - walls[0].rect.y:
-                        self.rect.x = walls[0].rect.x - wall_width
-                    elif self.rect.x - walls[0].rect.x > self.rect.y - walls[0].rect.y:
-                        self.rect.y = walls[0].rect.y - wall_width
+                    if self.rect.right - walls[0].rect.x < self.rect.bottom - walls[0].rect.y:
+                        self.rect.right = walls[0].rect.x
+                    elif self.rect.right - walls[0].rect.x > self.rect.bottom - walls[0].rect.y:
+                        self.rect.bottom = walls[0].rect.y
                     else:
-                        self.rect.y = walls[0].rect.y - wall_width
-                        self.rect.x = walls[0].rect.x - wall_width
-                elif len(walls) == 2:
-                    if walls[0].rect.x == walls[1].rect.x:
-                        self.rect.x = walls[0].rect.x - wall_width
+                        self.rect.bottom = walls[0].rect.y
+                        self.rect.right = walls[0].rect.x
+                elif len(walls) > 1:
+                    if min(wall.rect.x for wall in walls) == max(wall.rect.x for wall in walls):
+                        self.rect.right = walls[0].rect.x
+                    elif min(wall.rect.y for wall in walls) == max(wall.rect.y for wall in walls):
+                        self.rect.bottom = walls[0].rect.y
                     else:
-                        self.rect.y = walls[0].rect.y - wall_width
-                elif len(walls) == 3:
-                    self.rect.x = (walls[0].rect.x + walls[1].rect.x + walls[2].rect.x - wall_width * 2) // 3
-                    self.rect.y = (walls[0].rect.y + walls[1].rect.y + walls[2].rect.y - wall_width * 2) // 3
+                        self.rect.right = max(wall.rect.x for wall in walls)
+                        self.rect.bottom = max(wall.rect.y for wall in walls)
         else:
             if self.movex < 0:
                 self.frame += 1
@@ -153,14 +156,26 @@ class Hero(Creature):  # 角色类
                     self.frame = 0
                 self.image = self.images[self.frame // ani + 4]
                 for wall in pygame.sprite.spritecollide(self, game_map.walls, False):
-                    self.rect.x = wall.rect.x + wall_width
+                    self.rect.x = wall.rect.right
+                    break
             elif self.movex > 0:
                 self.frame += 1
                 if self.frame >= 4 * ani:
                     self.frame = 0
                 self.image = self.images[self.frame // ani + 8]
                 for wall in pygame.sprite.spritecollide(self, game_map.walls, False):
-                    self.rect.x = wall.rect.x - wall_width
+                    self.rect.right = wall.rect.x
+                    break
+
+        # 角色与楼梯精灵类的碰撞检测
+        stairs = pygame.sprite.spritecollide(self, game_map.stairs, False)
+        if not stairs:
+            self.stair_status = 0
+        elif game_map.layout_data[int((stairs[0].rect.y - game_map.top) // game_map.wall_width)][int(
+                (stairs[0].rect.x - game_map.left) // game_map.wall_width)] == 3:
+            self.stair_status = -1
+        else:
+            self.stair_status = 1
 
         # 下面判断角色移动是否触发地图整体的移动
         x_change = 0
@@ -209,6 +224,7 @@ class Hero(Creature):  # 角色类
         return x_change, y_change  # 返回地图需要移动的距离
 
     def attack(self, screen_height, pos):  # 角色攻击
+        self.bag.selecting = -1
         if not self.weapon:
             return
         time_now = pygame.time.get_ticks()
@@ -227,6 +243,7 @@ class Hero(Creature):  # 角色类
             harm.add_harm(strength - self.defence, self.rect)  # 伤害数值显示
         else:
             harm.add_harm(0, self.rect)
+        return 0
 
     def sword_attack_exist(self, monsters):  # 检测剑气存在时间是否已达上限
         if self.sword_attack:
@@ -251,6 +268,22 @@ class Hero(Creature):  # 角色类
         self.bag.equip_wear[0] = -1
         self.load_equipment()
 
+    def unlock(self, x, y, tip, game_map):  # 开门
+        self.bag.selecting = -1
+        for i in range(self.bag.space):
+            if self.bag.things_kind[i] and self.bag.things_kind[i][0] == 4 and self.bag.things_kind[i][1] == 1:
+                for j in range(x - 1, x + 2):
+                    for k in range(y - 1, y + 2):
+                        if 0 <= j < len(game_map.layout_data[0]) and 0 <= k < len(game_map.layout_data):
+                            if game_map.layout_data[k][j] == 2:
+                                game_map.layout_data[k][j] = 0
+                game_map.init_layout()
+                # 更新背包物品信息
+                self.bag.things_kind[i][-1] -= 1
+                self.bag.update(i)
+                return
+        tip.create_tip("缺少钥匙")
+
     def defense(self, status, kind):  # 防御，kind只有两种值：-1和1，-1表示取消防御，1表示开始防御
         pass
 
@@ -258,9 +291,6 @@ class Hero(Creature):  # 角色类
         pass
 
     def talk(self, npc):  # 与npc交谈
-        pass
-
-    def door(self, game_map):  # 开门
         pass
 
 

@@ -1,3 +1,7 @@
+import json
+import os
+
+
 class Thing:  # 物件基类
     def __init__(self, dictionary):
         self.kind = dictionary['kind']  # 物件种类
@@ -15,44 +19,17 @@ class Thing:  # 物件基类
         pass
 
 
-class Weapon(Thing):  # 武器类
-    def __init__(self, dictionary):
-        super().__init__(dictionary)
-        self.strength = dictionary['strength']  # 攻击力
+class Key:  # 钥匙类
+    def __init__(self):
+        self.sell_price = None
+        self.buy_price = None
+        self.load_data()
 
-    def attack(self):  # 攻击
-        pass
-
-    def equip(self):  # 装备
-        pass
-
-
-class Shield(Thing):  # 盾牌类
-    def __init__(self, dictionary):
-        super().__init__(dictionary)
-        self.defence = dictionary['defence']  # 防御力
-
-    def equip(self):  # 装备
-        pass
-
-
-class Jewel(Thing):  # 宝石类
-    def __init__(self, dictionary):
-        super().__init__(dictionary)
-        self.strength = dictionary['strength']
-        self.defence = dictionary['defence']
-
-    def equip(self):  # 装备
-        pass
-
-
-class Key(Thing):  # 钥匙类
-    def __init__(self, dictionary):
-        super().__init__(dictionary)
-        self.kind = dictionary['kind']  # 钥匙种类
-
-    def use(self):  # 使用
-        pass
+    def load_data(self):  # 初始化
+        with open(os.path.join('page', 'page4', 'item', '1.json'), 'r') as f:
+            dictionary = json.load(f)
+        self.buy_price = dictionary["buy_price"]
+        self.sell_price = dictionary["sell_price"]
 
 
 class LifePotion:  # 生命药水类

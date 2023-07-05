@@ -3,6 +3,7 @@ import os
 import pygame
 
 from game_equipment import Weapon
+from game_thing import Key
 
 
 class Merchant(pygame.sprite.Sprite):  # 商人类
@@ -170,6 +171,9 @@ class Store:  # 商店类
                 self.things.append(None)
             elif thing[0] == 1:  # 武器
                 self.things.append(Weapon(thing[1], thing[2], hero_size, hero_rect))
+            elif thing[0] == 4:  # 道具
+                if thing[1] == 1:  # 钥匙
+                    self.things.append(Key())
 
     def draw(self, screen):  # 绘制商店以及商店内物品等图像
         for image in self.images:
@@ -202,8 +206,9 @@ class Store:  # 商店类
         # 查看的物品图像的加载
         self.show_image[0] = pygame.transform.scale(self.things_images[selecting], self.show_image_size)
         self.showing = selecting
-        path = os.path.join('page', 'page4', 'thing', str(self.things_kind[selecting][0]),
-                            str(self.things_kind[selecting][1]), str(self.things_kind[selecting][2]))
+        path = os.path.join('page', 'page4', 'thing')
+        for i in self.things_kind[self.showing][:-2]:
+            path = os.path.join(path, str(i))
         # 打开存储物品信息的txt文本读取信息
         path1 = os.path.join(path, 'detail.txt')
         information = []
@@ -232,7 +237,7 @@ class Store:  # 商店类
             elif datas[i][4] == 3:
                 pass
             elif datas[i][4] == 4:
-                pass
+                info += str(self.things_kind[selecting][-1])
             elif datas[i][4] == 5:
                 info += str(self.things[selecting].buy_price)
             words = font.render(info, True, tuple(datas[i][2]))
