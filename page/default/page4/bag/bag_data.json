@@ -1,0 +1,13 @@
+{
+  "things_kind": [[1, 1, 1, 0, 1], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []],
+  "item_edge": 5,
+  "item_width": 49,
+  "move_gap": 20,
+  "equip_wear": [-1, -1],
+  "equip_image": ["image", "page4", "bag", "equipping.bmp"],
+  "selecting_image": ["image", "page4", "bag", "edge.bmp"],
+  "selecting_num_image": [[["image", "page4", "bag", "selecting_num.bmp"], [0.09, 0.96], [0.12, 0.01]], [["image", "page4", "bag", "sub.bmp"], [0.062, 0.95], [0.016, 0.03]], [["image", "page4", "bag", "add.bmp"], [0.22, 0.95], [0.016, 0.03]], [["image", "page4", "bag", "tick.bmp"], [0.15, 0.95], [0.005, 0.03]]],
+  "background": [["image", "page4", "bag", "background.bmp"], [0.3, 0.15], [0.2, 0.7]],
+  "show_image": [[0.4, 0.25], 0.15],
+  "things_num_font": [0.015, [0, 0, 0]]
+}
