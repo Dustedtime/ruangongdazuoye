@@ -26,7 +26,7 @@ class Key:  # 钥匙类
         self.load_data()
 
     def load_data(self):  # 初始化
-        with open(os.path.join('page', 'page4', 'item', '1.json'), 'r') as f:
+        with open(os.path.join('page', 'page4', 'thing', '4', '1', 'data.json'), 'r', encoding='utf-8') as f:
             dictionary = json.load(f)
         self.buy_price = dictionary["buy_price"]
         self.sell_price = dictionary["sell_price"]

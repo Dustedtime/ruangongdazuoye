@@ -14,9 +14,11 @@ class Hero(Creature):  # 角色类
         self.level = dictionary['level']  # 等级
         self.max_health = dictionary['max_health']  # 最大生命值
         self.max_exp = dictionary['max_exp']  # 当前等级升级需要最大经验值
+        self.speed = self.max_speed  # 角色当前速度
         self.choose = 0  # 武器帧数选择
         self.stair_status = 0  # 角色靠近楼梯标号（决定按下空格键是上楼梯、下楼梯还是无操作）
         self.door_enable = 1.5 * self.size[0]  # 角色最远开门距离
+        self.defensing = 0  # 角色处于持盾防御状态的标志
 
         self.left_max = dictionary['left_max'] * screen_width  # 向左移动时触发地图移动的极限坐标，下面三个类似
         self.right_min = dictionary['right_min'] * screen_width
@@ -26,21 +28,32 @@ class Hero(Creature):  # 角色类
         self.status = Status(screen_width, screen_height, self)  # 角色状态栏
         self.bag = Bag(setting, archival, self.size[0], self.rect)  # 背包
         self.weapon = None  # 角色武器
+        self.shield = None  # 角色盾牌
+        self.jewel = None  # 角色宝石
         self.bullets = pygame.sprite.Group()
         self.sword_attack = pygame.sprite.Group()
-        self.load_equipment()
+        self.load_weapon()
 
-    def load_equipment(self):  # 加载装备
+    def load_weapon(self):  # 加载装备中的武器
         if self.bag.equip_wear[0] >= 0:
             self.weapon = self.bag.things[self.bag.equip_wear[0]]
             self.weapon.update(self.rect, self.choose)
         else:
             self.weapon = None
 
+    def load_shield(self):  # 加载装备中的盾牌
+
+        pass
+
+    def load_jewel(self):  # 加载装备中的宝石
+        pass
+
     def draw(self, screen):  # 更新角色图像
         screen.blit(self.image, self.rect)
-        if self.weapon:
+        if self.weapon and not self.defensing:
             self.weapon.draw(screen)  # 绘制持有武器
+        if self.shield and self.defensing:
+            pass
         self.status.draw(screen)  # 绘制人物状态栏
         self.bag.draw(screen)  # 绘制背包栏
 
@@ -235,7 +248,8 @@ class Hero(Creature):  # 角色类
                 self.sword_attack.add(SwordAttack(self.rect, pos, self.strength + self.weapon.strength, screen_height))
             else:  # 远战
                 # noinspection PyTypeChecker
-                self.bullets.add(Bullet(self.rect, pos, self.strength + self.weapon.strength, 1, screen_height))
+                self.bullets.add(
+                    Bullet(self.rect, pos, self.strength + self.weapon.strength, self.weapon.num, screen_height))
 
     def attacked(self, strength, harm):  # 英雄被击中
         if strength > self.defence:  # 攻击高于防御，对英雄造成伤害
@@ -262,11 +276,13 @@ class Hero(Creature):  # 角色类
             pos = (pos + direction + self.bag.space) % self.bag.space
             if self.bag.things_kind[pos]:
                 if self.bag.things_kind[pos][0] == 1:
+                    if self.bag.equip_wear[0] == pos:
+                        return
                     self.bag.change_weapon_wear(pos)
-                    self.load_equipment()
+                    self.load_weapon()
                     return
         self.bag.equip_wear[0] = -1
-        self.load_equipment()
+        self.load_weapon()
 
     def unlock(self, x, y, tip, game_map):  # 开门
         self.bag.selecting = -1
@@ -287,12 +303,6 @@ class Hero(Creature):  # 角色类
     def defense(self, status, kind):  # 防御，kind只有两种值：-1和1，-1表示取消防御，1表示开始防御
         pass
 
-    def stairs(self, game_map):  # 上下楼梯
-        pass
-
-    def talk(self, npc):  # 与npc交谈
-        pass
-
 
 class Status:  # 人物状态栏类
     def __init__(self, screen_width, screen_height, hero):
@@ -304,8 +314,8 @@ class Status:  # 人物状态栏类
     def init_data(self, screen_width, screen_height, hero):  # 初始化数据
         self.info = ["等级:" + str(hero.level), "经验值:" + str(hero.exp) + "/" + str(hero.max_exp),
                      "生命值:" + str(hero.health) + "/" + str(hero.max_health), "金币:" + str(hero.money),
-                     "攻击力:" + str(hero.strength), "防御力:" + str(hero.defence), "速度:" + str(hero.speed)]
-        with open(os.path.join('page', 'page4', 'status.json'), 'r') as f:  # 读取图像数据并更新页面相关信息
+                     "攻击力:" + str(hero.strength), "防御力:" + str(hero.defence), "速度:" + str(hero.max_speed)]
+        with open(os.path.join('page', 'page4', 'status.json'), 'r', encoding='utf-8') as f:  # 读取图像数据并更新页面相关信息
             images = json.load(f)
             for image in images:
                 path = ''
@@ -316,7 +326,7 @@ class Status:  # 人物状态栏类
                 picture_left_top_pos = (screen_width * image[1][0], screen_height * image[1][1])
                 picture_right_bottom_pos = (picture_left_top_pos[0] + size[0], picture_left_top_pos[1] + size[1])
                 self.images.append([picture, picture_left_top_pos, picture_right_bottom_pos])
-        with open(os.path.join('page', 'page4', 'status_words.json'), 'r') as f:  # 读取文本数据并更新页面相关信息
+        with open(os.path.join('page', 'page4', 'status_words.json'), 'r', encoding='utf-8') as f:  # 读取文本数据并更新页面相关信息
             words = json.load(f)
             for i in range(len(words)):
                 font = pygame.font.SysFont('SimSun', int(words[i][0] * screen_height))
@@ -329,8 +339,8 @@ class Status:  # 人物状态栏类
         self.words = []
         self.info = ["等级:" + str(hero.level), "经验值:" + str(hero.exp) + "/" + str(hero.max_exp),
                      "生命值:" + str(hero.health) + "/" + str(hero.max_health), "金币:" + str(hero.money),
-                     "攻击力:" + str(hero.strength), "防御力:" + str(hero.defence), "速度:" + str(hero.speed)]
-        with open(os.path.join('page', 'page4', 'status_words.json'), 'r') as f:  # 读取文本数据并更新页面相关信息
+                     "攻击力:" + str(hero.strength), "防御力:" + str(hero.defence), "速度:" + str(hero.max_speed)]
+        with open(os.path.join('page', 'page4', 'status_words.json'), 'r', encoding='utf-8') as f:  # 读取文本数据并更新页面相关信息
             words = json.load(f)
             for i in range(len(words)):
                 font = pygame.font.SysFont('SimSun', int(words[i][0] * screen_height))

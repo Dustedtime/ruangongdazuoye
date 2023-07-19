@@ -20,7 +20,7 @@ class Function:
     @staticmethod
     def load_page_image(route, screen_width, screen_height, images_page):  # 加载当前页面基本图像
         images_page.clear()
-        with open(os.path.join(route, 'images.json'), 'r') as f:  # 读取图像数据并更新页面相关信息
+        with open(os.path.join(route, 'images.json'), 'r', encoding='utf-8') as f:  # 读取图像数据并更新页面相关信息
             images = json.load(f)
             for image in images:
                 path = ''
@@ -39,7 +39,7 @@ class Function:
         words_page.clear()
         if page_kind == 1:
             archival.clear()
-            with open(os.path.join(route, 'archival.json'), 'r') as f:
+            with open(os.path.join(route, 'archival.json'), 'r', encoding='utf-8') as f:
                 words = json.load(f)
                 for word in words:
                     font = pygame.font.SysFont('SimSun', int(word[0] * screen_height))  # 设置字体
@@ -52,7 +52,7 @@ class Function:
     @staticmethod
     def load_page_word(route, screen_width, screen_height, page_words):  # 加载页面显示的文本信息
         if os.path.exists(os.path.join(route, 'words.json')):
-            with open(os.path.join(route, 'words.json'), 'r') as f:
+            with open(os.path.join(route, 'words.json'), 'r', encoding='utf-8') as f:
                 words = json.load(f)
                 for word in words:
                     font = pygame.font.SysFont('SimSun', int(word[0] * screen_height))  # 设置字体
@@ -65,7 +65,7 @@ class Function:
     def load_page_image_after(route, screen_width, screen_height, page_images_after):  # 加载页面后续要显示图像
         page_images_after.clear()
         if os.path.exists(os.path.join(route, 'images_after.json')):
-            with open(os.path.join(route, 'images_after.json'), 'r') as f:
+            with open(os.path.join(route, 'images_after.json'), 'r', encoding='utf-8') as f:
                 images_after = json.load(f)
                 for image_after in images_after:
                     path = ''
@@ -81,7 +81,7 @@ class Function:
     def load_page_word_after(route, screen_width, screen_height, page_words_after):  # 加载页面后续要显示文本
         page_words_after.clear()
         if os.path.exists(os.path.join(route, 'words_after.json')):
-            with open(os.path.join(route, 'words_after.json'), 'r') as f:
+            with open(os.path.join(route, 'words_after.json'), 'r', encoding='utf-8') as f:
                 words_after = json.load(f)
                 for word_after in words_after:
                     font = pygame.font.SysFont('SimSun', int(word_after[0] * screen_height))  # 设置字体
@@ -230,11 +230,11 @@ class Function:
                 page.images_after_num = 1
                 page.images.append([page.images_after[2][0], page.images_after[2][1]])
         else:  # 修改数据，创建存档
-            with open(os.path.join('page', 'page1', 'archival.json'), 'r') as f:  # 读取所有存档名字，存储为列表
+            with open(os.path.join('page', 'page1', 'archival.json'), 'r', encoding='utf-8') as f:  # 读取所有存档名字，存储为列表
                 archival = json.load(f)
             archival[page.current_archival[0]][1] = page.current_archival[1]  # 修改列表相应位置名字
-            with open(os.path.join('page', 'page1', 'archival.json'), "w") as f:  # 将修改后的存档名字列表重新写入文件
-                json.dump(archival, f)
+            with open(os.path.join('page', 'page1', 'archival.json'), "w", encoding='utf-8') as f:  # 将修改后的存档名字列表重新写入文件
+                json.dump(archival, f, ensure_ascii=False)
             target_path = os.path.join('page', page.current_archival[1])
             self.copy_dir(os.path.join('page', 'default'), target_path)  # 创建存档目录，并把一些必要数据复制过去
             page.current_archival[0] = -1  # 重置当前选中存档信息
@@ -255,11 +255,11 @@ class Function:
     @staticmethod
     def delete_archival(current_archival):  # 删除存档目录，修改存储存档名字的文件信息
         shutil.rmtree(os.path.join('page', current_archival[1]))
-        with open(os.path.join('page', 'page1', 'archival.json'), 'r') as f:
+        with open(os.path.join('page', 'page1', 'archival.json'), 'r', encoding='utf-8') as f:
             archival = json.load(f)
         archival[current_archival[0]][1] = "New Game"
-        with open(os.path.join('page', 'page1', 'archival.json'), 'w') as f:
-            json.dump(archival, f)
+        with open(os.path.join('page', 'page1', 'archival.json'), 'w', encoding='utf-8') as f:
+            json.dump(archival, f, ensure_ascii=False)
         current_archival[0] = -1
         current_archival[1] = ''
 
@@ -268,16 +268,17 @@ class Function:
         page.current_archival = [num, page.archival[num]]  # 更新当前游戏中的存档信息
         archival_path = os.path.join('page', page.current_archival[-1], 'page4')
         # 实例化地图
-        with open(os.path.join(archival_path, 'floor_data.json'), 'r') as f:
+        with open(os.path.join(archival_path, 'floor_data.json'), 'r', encoding='utf-8') as f:
             dictionary = json.load(f)
             dictionary_temp = dictionary.copy()
         for key in dictionary:
-            with open(os.path.join(archival_path, 'floor' + str(dictionary[key]), 'map_data.json'), 'r') as f:
+            with open(os.path.join(archival_path, 'floor' + str(dictionary[key]), 'map_data.json'), 'r',
+                      encoding='utf-8') as f:
                 dictionary_temp.update(json.load(f))
         page.game_map = Map(dictionary_temp, page.setting.screen_width, page.setting.screen_height)
         # 实例化角色
         if not change:
-            with open(os.path.join(archival_path, 'player', 'player_data.json'), 'r') as f:
+            with open(os.path.join(archival_path, 'player', 'player_data.json'), 'r', encoding='utf-8') as f:
                 dictionary = json.load(f)
             page.hero = Hero(dictionary, page.setting, page.setting.screen_width, page.setting.screen_height,
                              page.current_archival[1])
@@ -297,7 +298,7 @@ class Function:
         data = []
         path = os.path.join(archival_path, 'floor' + str(page.game_map.height), 'monster_data.json')
         if os.path.exists(path):
-            with open(path, 'r') as f:
+            with open(path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
         monster_num = len(data)
         i = 0
@@ -310,7 +311,7 @@ class Function:
         data = []
         path = os.path.join(archival_path, 'floor' + str(page.game_map.height), 'npc_data.json')
         if os.path.exists(path):
-            with open(path, 'r') as f:
+            with open(path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
         for dictionary in data:
             page.npc.add(NPC(dictionary, page.setting.screen_width, page.setting.screen_height))
@@ -318,7 +319,7 @@ class Function:
         data = []
         path = os.path.join(archival_path, 'floor' + str(page.game_map.height), 'box_data.json')
         if os.path.exists(path):
-            with open(path, 'r') as f:
+            with open(path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
         for dictionary in data:
             page.box.add(Box(page.hero.size[0], page.hero.rect, page.setting, dictionary))
@@ -326,7 +327,7 @@ class Function:
         data = []
         path = os.path.join(archival_path, 'floor' + str(page.game_map.height), 'merchant_data.json')
         if os.path.exists(path):
-            with open(path, 'r') as f:
+            with open(path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
         for dictionary in data:
             page.merchant.add(Merchant(dictionary, page.setting, page.hero.size[0], page.hero.rect))
@@ -335,6 +336,28 @@ class Function:
         if not change:
             page.update_page_type(4)
         page.tip.create_tip("第" + str(page.game_map.height) + "层")
+
+    @staticmethod
+    def pause_game_attack(page):  # 游戏画面暂停时计算当前所有拥有攻击行为的对象后摇已冷却时间
+        if page.pausing:
+            return
+        page.pausing = True
+        time_now = pygame.time.get_ticks()
+        page.hero.attack_time_pause = time_now - page.hero.attack_time
+        for monster in page.monster:
+            monster.attack_time_pause = time_now - monster.attack_time
+            monster.move_time_pause = time_now - monster.move_time
+        return
+
+    @staticmethod
+    def start_game_attack(page):  # 游戏画面从暂停恢复时重置当前所有拥有攻击行为的对象上次攻击时间
+        page.pausing = False
+        time_now = pygame.time.get_ticks()
+        page.hero.attack_time = time_now - page.hero.attack_time_pause
+        for monster in page.monster:
+            monster.attack_time = time_now - monster.attack_time_pause
+            monster.move_time = time_now - monster.move_time_pause
+        return
 
     @staticmethod
     def box_merchant_check(boxes, merchants):  # 检测宝箱以及商人的状态，返回此刻交互中的宝箱或商人（无交互则返回None）
@@ -390,14 +413,16 @@ class Function:
 
     @staticmethod
     def save_progress(page, change):  # 保存游戏进度
+        page.pausing = False
         screen_width, screen_height = page.setting.screen_width, page.setting.screen_height
         current_archival = page.current_archival[1]  # 获取当前存档名
         # 保存游戏地图相关信息
         data = {"height": page.game_map.height + change}
-        with open(os.path.join('page', current_archival, 'page4', 'floor_data.json'), 'w') as f:  # 保存当前地图层数
-            json.dump(data, f)
+        with open(os.path.join('page', current_archival, 'page4', 'floor_data.json'), 'w',
+                  encoding='utf-8') as f:  # 保存当前地图层数
+            json.dump(data, f, ensure_ascii=False)
         path = os.path.join('page', current_archival, 'page4', 'floor' + str(page.game_map.height), 'map_data.json')
-        with open(path, 'r') as f:
+        with open(path, 'r', encoding='utf-8') as f:
             data = json.load(f)
         data["layout_data"] = page.game_map.layout_data
         data["left"] = [page.game_map.left / screen_width, 0]
@@ -406,36 +431,36 @@ class Function:
         data["bottom"] = [page.game_map.bottom / screen_height, 0]
         data['hero_rect_init_sign'] = 0
         data['hero_rect'] = [[page.hero.rect.x / screen_width, 0], [page.hero.rect.y / screen_height, 0]]
-        with open(path, 'w') as f:
-            json.dump(data, f)
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False)
         # 保存英雄数据
         if not change:
             path = os.path.join('page', current_archival, 'page4', 'player', 'player_data.json')
-            with open(path, 'r') as f:
+            with open(path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             data['health'] = page.hero.health
             data['strength'] = page.hero.strength
             data['defence'] = page.hero.defence
-            data['speed'] = page.hero.speed / screen_height
+            data['speed'] = page.hero.max_speed / screen_height
             data['money'] = page.hero.money
             data['exp'] = page.hero.exp
             data['max_health'] = page.hero.max_health
             data['level'] = page.hero.level
             data['max_exp'] = page.hero.max_exp
-            with open(path, 'w') as f:
-                json.dump(data, f)
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False)
             # 保存背包信息
             path = os.path.join('page', current_archival, 'page4', 'bag', 'bag_data.json')
-            with open(path, 'r') as f:
+            with open(path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             data['equip_wear'] = page.hero.bag.equip_wear
             data['things_kind'] = page.hero.bag.things_kind
-            with open(path, 'w') as f:
-                json.dump(data, f)
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False)
         # 保存宝箱信息
         if page.box:
             path = os.path.join('page', current_archival, 'page4', 'floor' + str(page.game_map.height), 'box_data.json')
-            with open(path, 'r') as f:
+            with open(path, 'r', encoding='utf-8') as f:
                 data_list = json.load(f)
             box_num = len(data_list)
             i = 0
@@ -446,11 +471,11 @@ class Function:
                 data_list[i]['rect'] = [box.rect.x / screen_width, box.rect.y / screen_height]
                 data_list[i]['things_kind'] = box.things_kind
                 i += 1
-            with open(path, 'w') as f:
-                json.dump(data_list, f)
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(data_list, f, ensure_ascii=False)
         # 保存怪物信息
         path = os.path.join('page', current_archival, 'page4', 'floor' + str(page.game_map.height), 'monster_data.json')
-        with open(path, 'r') as f:
+        with open(path, 'r', encoding='utf-8') as f:
             data_list = json.load(f)
         monster_num = len(data_list)
         i = 0
@@ -469,12 +494,12 @@ class Function:
         while i < monster_num:
             data_list[i]["die"] = 1
             i += 1
-        with open(path, 'w') as f:
-            json.dump(data_list, f)
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(data_list, f, ensure_ascii=False)
         # 保存npc信息
         if page.npc:
             path = os.path.join('page', current_archival, 'page4', 'floor' + str(page.game_map.height), 'npc_data.json')
-            with open(path, 'r') as f:
+            with open(path, 'r', encoding='utf-8') as f:
                 data_list = json.load(f)
             i = 0
             for npc in page.npc:
@@ -482,21 +507,21 @@ class Function:
                 data_list[i]['status_start'] = npc.status_start
                 data_list[i]['status_end'] = npc.status_end
                 i += 1
-            with open(path, 'w') as f:
-                json.dump(data_list, f)
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(data_list, f, ensure_ascii=False)
         # 保存商人信息
         if page.merchant:
             path = os.path.join('page', current_archival, 'page4', 'floor' + str(page.game_map.height),
                                 'merchant_data.json')
-            with open(path, 'r') as f:
+            with open(path, 'r', encoding='utf-8') as f:
                 data_list = json.load(f)
             i = 0
             for merchant in page.merchant:
                 data_list[i]['rect'] = [merchant.rect.x / screen_width, merchant.rect.y / screen_height]
                 data_list[i]['things_kind'] = merchant.store.things_kind
                 i += 1
-            with open(path, 'w') as f:
-                json.dump(data_list, f)
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(data_list, f, ensure_ascii=False)
         # 删除游戏内实例化对象
         page.hero.bullets = pygame.sprite.Group()
         page.hero.sword_attack = pygame.sprite.Group()
@@ -510,11 +535,10 @@ class Function:
             page.current_archival = [-1, '']
             page.hero = None
             page.tip.create_tip("游戏进度已保存")
-        pass
 
     @staticmethod
     def change_music_state(page, num, state):  # 改变游戏音乐或音效开关状态
-        with open(os.path.join('page', 'page5', 'images.json'), 'r') as f:  # 读取音效图像信息
+        with open(os.path.join('page', 'page5', 'images.json'), 'r', encoding='utf-8') as f:  # 读取音效图像信息
             data = json.load(f)
         if data[num][0][2] == "on.bmp":  # 修改状态
             data[num][0][2] = "off.bmp"
@@ -527,14 +551,14 @@ class Function:
         # 要转换的图像尺寸
         size = (page.images[num][2][0] - page.images[num][1][0], page.images[num][2][1] - page.images[num][1][1])
         page.images[num][0] = pygame.transform.scale(image, size)  # 更新图像
-        with open(os.path.join('page', 'page5', 'images.json'), "w") as f:  # 将最终效果保存至文件
-            json.dump(data, f)
+        with open(os.path.join('page', 'page5', 'images.json'), "w", encoding='utf-8') as f:  # 将最终效果保存至文件
+            json.dump(data, f, ensure_ascii=False)
         return not state
 
     @staticmethod
     def change_volume_instant(page, event):  # 修改游戏音量
         screen_width = page.setting.screen_width
-        with open(os.path.join('page', 'page5', 'images.json'), 'r') as f:  # 读取音效图像信息
+        with open(os.path.join('page', 'page5', 'images.json'), 'r', encoding='utf-8') as f:  # 读取音效图像信息
             data = json.load(f)
         data[7][1][0] = (event.pos[0] - data[7][2][0] * screen_width / 2) / screen_width
         if data[7][1][0] + data[7][2][0] / 2 < data[6][1][0]:
@@ -544,8 +568,8 @@ class Function:
         page.setting.volume[1] = (data[7][1][0] + data[7][2][0] / 2) * screen_width  # 修改游戏音量
         page.images[7][1] = (data[7][1][0] * screen_width, page.images[7][1][1])
         page.images[7][2] = (page.images[7][1][0] + data[7][2][0] * screen_width, page.images[7][2][1])
-        with open(os.path.join('page', 'page5', 'images.json'), "w") as f:  # 将最终效果保存至文件
-            json.dump(data, f)
+        with open(os.path.join('page', 'page5', 'images.json'), "w", encoding='utf-8') as f:  # 将最终效果保存至文件
+            json.dump(data, f, ensure_ascii=False)
 
     @staticmethod
     def change_volume_constant(page, event):  # 鼠标拖动音量刻度改变音量大小

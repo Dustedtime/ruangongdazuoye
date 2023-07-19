@@ -54,7 +54,7 @@ class Bag:  # 背包类
 
     def load_data(self, screen_width, screen_height, archival, hero_size, hero_rect):  # 加载背包信息
         # 加载背包基本图像
-        with open(os.path.join('page', 'page4', 'bag.json'), 'r') as f:
+        with open(os.path.join('page', 'page4', 'bag.json'), 'r', encoding='utf-8') as f:
             images = json.load(f)
         for image in images:
             path = ''
@@ -66,7 +66,7 @@ class Bag:  # 背包类
             img_right_bottom = (img_left_top[0] + size[0], img_left_top[1] + size[1])
             self.images.append([img, img_left_top, img_right_bottom])  # 将图像及相关信息存入列表
         # 初始化背包属性
-        with open(os.path.join('page', archival, 'page4', 'bag', 'bag_data.json'), 'r') as f:
+        with open(os.path.join('page', archival, 'page4', 'bag', 'bag_data.json'), 'r', encoding='utf-8') as f:
             data = json.load(f)
         self.move_gap = data['move_gap']
         self.equip_wear = data['equip_wear']
@@ -99,9 +99,9 @@ class Bag:  # 背包类
         for i in range(self.space):
             path1 = path
             if self.things_kind[i]:
-                for num in self.things_kind[i][:-3]:
+                for num in self.things_kind[i][:-2]:
                     path1 = os.path.join(path1, str(num))
-                path1 = os.path.join(path1, str(self.things_kind[i][-3]) + '.bmp')
+                path1 = os.path.join(path1, '1.bmp')
                 image = pygame.image.load(path1)
                 self.things_images.append(pygame.transform.scale(image, size1))
                 self.things_num += 1  # 背包内物品数量加一
@@ -155,7 +155,7 @@ class Bag:  # 背包类
         centery = (self.selecting_num_image[3][1][1] + self.selecting_num_image[3][2][1]) / 2
         self.selecting_num_image[3][1] = self.selecting_num_image[3][0].get_rect()
         self.selecting_num_image[3][1].centery = centery
-        with open(os.path.join('page', 'page4', 'bag_words.json'), 'r') as f:
+        with open(os.path.join('page', 'page4', 'bag_words.json'), 'r', encoding='utf-8') as f:
             words_data = json.load(f)
         for words in words_data:
             font = pygame.font.SysFont('SimSun', int(screen_height * words[0]))
@@ -366,56 +366,46 @@ class Bag:  # 背包类
         path = os.path.join('page', 'page4', 'thing')
         for i in self.things_kind[self.showing][:-2]:
             path = os.path.join(path, str(i))
-        # 打开存储物品信息的txt文本读取信息
-        path1 = os.path.join(path, 'detail.txt')
-        information = []
-        with open(path1, 'r', encoding='utf-8') as f:
-            data = f.readline()
-            while data:
-                information.append(data[:-1])
-                data = f.readline()
-        information.append("出售价格：")
+        path = os.path.join(path, 'word.json')
+        # 打开存储物品信息的json文件读取信息
+        with open(path, 'r', encoding='utf-8') as f:
+            datas = json.load(f)
+        datas[-3][-1] = "出售价格："
         if box:
-            information.append("丢弃")
+            datas[-2][-1] = "丢弃"
         elif merchant:
-            information.append("出售")
+            datas[-2][-1] = "出售"
         else:
-            if self.things_kind[self.selecting][0] <= 2:  # 查看物品为装备
+            if self.things_kind[self.selecting][0] <= 3:  # 查看物品为装备
                 if self.equip_wear[0] == self.selecting:
-                    information.append("脱除")
+                    datas[-2][-1] = "脱除"
                 else:
-                    information.append("装备")
+                    datas[-2][-1] = "装备"
             elif self.things_kind[self.selecting][0] == 3:
                 pass
             elif self.things_kind[self.selecting][0] == 4:
-                information.append("使用")
-        information.append("取消")
-        # 读取字体设置的信息
-        path2 = os.path.join(path, 'word.json')
-        with open(path2, 'r') as f:
-            datas = json.load(f)
-        self.show_click_word = datas[-2]
+                datas[-2][-1] = "使用"
+        self.show_click_word = datas[-2][:-1]
         # 物品详细的文本描述信息
-        for i in range(len(information)):
-            font = pygame.font.SysFont('SimSun', int(datas[i][0] * screen_height))
-            info = information[i]
-            if datas[i][4] == 1:
+        for data in datas:
+            font = pygame.font.SysFont('SimSun', int(data[0] * screen_height))
+            info = data[-1]
+            if data[4] == 1:
                 info += str(self.things[self.selecting].strength)
-            elif datas[i][4] == 2:
+            elif data[4] == 2:
                 info += str(self.things[self.selecting].defence)
-            elif datas[i][4] == 3:
+            elif data[4] == 3:
                 pass
-            elif datas[i][4] == 4:
+            elif data[4] == 4:
                 info += str(self.things_kind[self.selecting][-1])
-            elif datas[i][4] == 5:
+            elif data[4] == 5:
                 info += str(self.things[self.selecting].sell_price)
-            words = font.render(info, True, tuple(datas[i][2]))
+            words = font.render(info, True, tuple(data[2]))
             rect = words.get_rect()
-            if datas[i][3]:
-                rect.x = datas[i][1][0] * screen_width
-                rect.y = datas[i][1][1] * screen_height
+            if data[3]:
+                rect.topleft = (data[1][0] * screen_width, data[1][1] * screen_height)
             else:
-                rect.center = (datas[i][1][0] * screen_width, datas[i][1][1] * screen_height)
+                rect.center = (data[1][0] * screen_width, data[1][1] * screen_height)
             self.show_words.append([words, rect])
 
     def showing_click_left(self, screen_width, screen_height, box, merchant, hero, tip):  # 查看物品详细信息时点击了操作键

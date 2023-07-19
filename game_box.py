@@ -53,7 +53,6 @@ class Box(pygame.sprite.Sprite):  # 宝箱类
         self.background = None  # 物品详细信息查看的背景图
         self.show_image = []  # 详细信息中的物品图像
         self.show_words = []  # 详细信息中的物品文字描述等
-        self.show_click_word = None  # 详细信息界面可以点击的按钮的文本设置属性
 
         self.init_data(dictionary, setting.screen_width, setting.screen_height, hero_size, hero_rect)  # 初始化宝箱
 
@@ -109,9 +108,9 @@ class Box(pygame.sprite.Sprite):  # 宝箱类
         for thing in self.things_kind:
             if thing:
                 path1 = path
-                for num in thing[:-3]:
+                for num in thing[:-2]:
                     path1 = os.path.join(path1, str(num))
-                path1 = os.path.join(path1, str(thing[-3]) + '.bmp')
+                path1 = os.path.join(path1, '1.bmp')
                 image = pygame.image.load(path1)
                 self.things_images.append(pygame.transform.scale(image, size))
                 self.things_num += 1
@@ -360,43 +359,32 @@ class Box(pygame.sprite.Sprite):  # 宝箱类
         path = os.path.join('page', 'page4', 'thing')
         for i in self.things_kind[self.showing][:-2]:
             path = os.path.join(path, str(i))
-        # 打开存储物品信息的txt文本读取信息
-        path1 = os.path.join(path, 'detail.txt')
-        information = []
-        with open(path1, 'r', encoding='utf-8') as f:
-            data = f.readline()
-            while data:
-                information.append(data[:-1])
-                data = f.readline()
-        information.append("出售价格：")
-        information.append("拾取")
-        information.append("返回")
-        # 读取字体设置的信息
-        path2 = os.path.join(path, 'word.json')
-        with open(path2, 'r') as f:
+        path = os.path.join(path, 'word.json')
+        # 打开存储物品信息的json文件读取信息
+        with open(path, 'r', encoding='utf-8') as f:
             datas = json.load(f)
-        self.show_click_word = datas[-2]
+        datas[-3][-1] = "出售价格："
+        datas[-2][-1] = "拾取"
         # 物品详细的文本描述信息
-        for i in range(len(information)):
-            font = pygame.font.SysFont('SimSun', int(datas[i][0] * screen_height))
-            info = information[i]
-            if datas[i][4] == 1:
+        for data in datas:
+            font = pygame.font.SysFont('SimSun', int(data[0] * screen_height))
+            info = data[-1]
+            if data[4] == 1:
                 info += str(self.things[self.selecting].strength)
-            elif datas[i][4] == 2:
+            elif data[4] == 2:
                 info += str(self.things[self.selecting].defence)
-            elif datas[i][4] == 3:
+            elif data[4] == 3:
                 pass
-            elif datas[i][4] == 4:
+            elif data[4] == 4:
                 info += str(self.things_kind[self.selecting][-1])
-            elif datas[i][4] == 5:
+            elif data[4] == 5:
                 info += str(self.things[self.selecting].sell_price)
-            words = font.render(info, True, tuple(datas[i][2]))
+            words = font.render(info, True, tuple(data[2]))
             rect = words.get_rect()
-            if datas[i][3]:
-                rect.x = datas[i][1][0] * screen_width
-                rect.y = datas[i][1][1] * screen_height
+            if data[3]:
+                rect.topleft = (data[1][0] * screen_width, data[1][1] * screen_height)
             else:
-                rect.center = (datas[i][1][0] * screen_width, datas[i][1][1] * screen_height)
+                rect.center = (data[1][0] * screen_width, data[1][1] * screen_height)
             self.show_words.append([words, rect])
 
     def pick(self, bag):  # 拾取物品
