@@ -17,7 +17,7 @@ class Tip:  # 游戏提示类
 
     def init_data(self, screen_width, screen_height):  # 初始化信息
         path = os.path.join('page', 'tip.json')
-        with open(path, 'r') as f:
+        with open(path, 'r', encoding='utf-8') as f:
             dictionary = json.load(f)
         # 背景图像
         for image in dictionary['images']:

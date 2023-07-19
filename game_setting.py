@@ -23,7 +23,7 @@ class Setting:  # 游戏设置类
         self.screen_height = screen.get_height()
 
     def music_init(self):
-        with open(os.path.join('page', 'page5', 'images.json'), 'r') as f:
+        with open(os.path.join('page', 'page5', 'images.json'), 'r', encoding='utf-8') as f:
             data = json.load(f)
         self.volume = [data[6][1][0] * self.screen_width, (data[7][1][0] + data[7][2][0] / 2) * self.screen_width]
         if data[8][0][2] == 'off.bmp':

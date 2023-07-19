@@ -12,7 +12,7 @@ def run_game():  # 游戏主函数
     del screen
     screen = pygame.display.set_mode((setting.screen_width, setting.screen_height))  # 创建窗口
     page = Page(setting, screen)  # 页面类实例化
-    pygame.display.set_caption("地宫类闯关游戏")
+    pygame.display.set_caption("逃离电子囚笼")
     clock = pygame.time.Clock()
     while True:  # 游戏主循环
         clock.tick(100)

@@ -16,7 +16,7 @@ class Harm:  # 伤害数值的显示
 
     def init_data(self, screen_height):  # 初始化固定数值
         # 获取伤害显示的相关信息
-        with open(os.path.join('page', 'page4', 'harm.json'), 'r') as f:
+        with open(os.path.join('page', 'page4', 'harm.json'), 'r', encoding='utf-8') as f:
             dictionary = json.load(f)
         self.speed = dictionary['speed'] * screen_height  # 伤害在屏幕中上升的速度
         self.time_existing = dictionary['time_existing']  # 伤害在屏幕中存在的时间

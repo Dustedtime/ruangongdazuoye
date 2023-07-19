@@ -41,7 +41,7 @@ class Map:  # 游戏地图类
                     location = (self.left + self.wall_width * j, self.top + self.wall_width * i)
                     size = (self.wall_width, self.wall_width)
                     # noinspection PyTypeChecker
-                    self.stairs.add(Stairs(location, size))  # 实例化楼梯
+                    self.stairs.add(Stairs(location, size, self.layout_data[i][j] - 2))  # 实例化楼梯
 
     def update(self, x, y):  # 更新场景中除角色外所有对象坐标
         self.walls.update(x, y)
@@ -86,9 +86,10 @@ class Door(pygame.sprite.Sprite):  # 定义门类
 
 
 class Stairs(pygame.sprite.Sprite):  # 定义楼梯类
-    def __init__(self, location, size):
+    def __init__(self, location, size, kind):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.transform.scale(pygame.image.load(os.path.join('image', 'page4', 'map', 'stair.bmp')), size)
+        path = os.path.join('image', 'page4', 'map', 'stair' + str(kind) + '.bmp')
+        self.image = pygame.transform.scale(pygame.image.load(path), size)
         self.image.convert_alpha()
         self.rect = self.image.get_rect()
         self.rect.topleft = location

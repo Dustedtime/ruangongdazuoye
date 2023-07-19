@@ -10,8 +10,9 @@ from game_equipment import Bullet
 class Monster(Creature):  # 定义怪物类
     def __init__(self, dictionary, screen_width, screen_height):
         Creature.__init__(self, dictionary, screen_width, screen_height)  # 调用父类初始化
-        self.move_time = 0  # 怪物上次更新移动方向的时间
+        self.move_time = pygame.time.get_ticks()  # 怪物上次更新移动方向的时间
         self.move_time_gap = dictionary['move_time_gap']  # 怪物移动方向更新的时间
+        self.move_time_pause = -1  # 暂停页面加载瞬间的时间差，用于从暂停页面恢复游戏正常页面时计算当前改变移动方向剩余冷却时间
         self.backshake = dictionary['backshake']  # 怪物攻击后摇
         self.chasing = 0  # 怪物是否追逐角色
         self.chasing_gap = dictionary['chasing_gap']  # 用于判断怪物与英雄之间是否隔墙的丈量步长，越小越准确
@@ -249,7 +250,7 @@ class Monster(Creature):  # 定义怪物类
                 elif x_div >= 0 and y_div >= 0 and (x_monster > x_hero or y_monster > y_hero):
                     break
                 # 隔墙，追踪标志置零
-                if game_map.layout_data[int(y_monster // width)][int(x_monster // width)]:
+                if 0 < game_map.layout_data[int(y_monster // width)][int(x_monster // width)] < 3:
                     chasing_enable = 0
                     break
                 x_monster += x_div
@@ -264,8 +265,8 @@ class Monster(Creature):  # 定义怪物类
             return
         else:  # 未注意到角色，随机移动
             self.move_time = time_now
-            self.movex = random.uniform(-self.speed, self.speed)
-            self.movey = random.uniform(-self.speed, self.speed)
+            self.movex = random.uniform(-self.max_speed, self.max_speed)
+            self.movey = random.uniform(-self.max_speed, self.max_speed)
 
     def follow(self, hero_rect):  # 怪物发现角色后的移动
         hero_x, hero_y = hero_rect.centerx, hero_rect.centery
@@ -274,10 +275,10 @@ class Monster(Creature):  # 定义怪物类
         y_gap = abs(hero_y - monster_y)
         if self.chasing == 1:  # 追逐
             if x_gap >= y_gap:
-                speed_x = self.speed
+                speed_x = self.max_speed
                 speed_y = speed_x * y_gap / x_gap
             else:
-                speed_y = self.speed
+                speed_y = self.max_speed
                 speed_x = speed_y * x_gap / y_gap
             if monster_x + speed_x <= hero_x:
                 self.movex = speed_x

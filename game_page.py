@@ -12,6 +12,7 @@ class Page:  # 定义页面类
     def __init__(self, setting, screen):
         self.screen = screen
         self.setting = setting
+        self.pausing = False
         self.hero = None
         self.monster = pygame.sprite.Group()
         self.monster_bullets = pygame.sprite.Group()  # 怪物发出的子弹
@@ -63,11 +64,7 @@ class Page:  # 定义页面类
         self.tip.draw(self.screen)
 
     def update_game_scene(self):  # 更新游戏画面
-        if self.hero.bag.showing >= 0:  # 检测是否正在查看物品详细信息
-            return
-        # 检测当前宝箱以及商人状态
-        box, merchant = self.functions.box_merchant_check(self.box, self.merchant)
-        if box or merchant:
+        if self.pausing:  # 检测是否处于暂停状态
             return
         # 更新人物位置
         screen_width, screen_height = self.setting.screen_width, self.setting.screen_height
@@ -171,6 +168,7 @@ class Page:  # 定义页面类
         elif self.images[2][1][0] <= event.pos[0] < self.images[2][2][0] and self.images[2][1][1] <= event.pos[1] < \
                 self.images[2][2][1]:
             self.update_page_type(5)
+            self.images.pop()
         elif self.images[3][1][0] <= event.pos[0] < self.images[3][2][0] and self.images[3][1][1] <= event.pos[1] < \
                 self.images[3][2][1]:
             self.update_page_type(6)
@@ -196,8 +194,9 @@ class Page:  # 定义页面类
             elif event.button == 3:
                 if self.archival[num] != "New Game":  # 选中存档不为空，进入删除存档界面
                     self.current_archival = [num, self.archival[num]]
-                    with open(os.path.join('page', 'page3', 'words.json'), 'w') as f:  # 更新存有要删除的存档的名字的文件信息
-                        json.dump([[0.1, self.current_archival[1], [0.5, 0.55], [0, 0, 0]]], f)
+                    with open(os.path.join('page', 'page3', 'words.json'), 'w',
+                              encoding='utf-8') as f:  # 更新存有要删除的存档的名字的文件信息
+                        json.dump([[0.1, self.current_archival[1], [0.5, 0.55], [0, 0, 0]]], f, ensure_ascii=False)
                     self.update_page_type(3)
 
     def mouse_button_down_page2(self, event):  # 页面编号为2时鼠标按下
@@ -225,12 +224,12 @@ class Page:  # 定义页面类
         # 保存游戏进度并返回主菜单
         if self.images[0][1][0] <= event.pos[0] < self.images[0][2][0] and self.images[0][1][1] <= event.pos[1] < \
                 self.images[0][2][1]:
-            if self.hero.bag.showing < 0 and not box and not merchant:
-                self.functions.save_progress(self, 0)  # 保存游戏进度
-                self.update_page_type(0)  # 返回主菜单
+            if not self.pausing:
+                self.functions.pause_game_attack(self)
+                self.update_page_type(5)  # 暂停游戏，进入设置界面
                 return
         # 角色开门或攻击
-        elif self.hero.bag.showing < 0 and not box and not merchant and self.game_map.left_max <= \
+        elif self.hero.bag.showing < 0 and not self.pausing and self.game_map.left_max <= \
                 event.pos[0] < self.game_map.right_min and self.game_map.top_max <= event.pos[1] < \
                 self.game_map.bottom_min:
             # 鼠标点击位置在地图中的横纵数组下标
@@ -287,6 +286,7 @@ class Page:  # 定义页面类
         elif box and box.images_opening[2][1][0] <= event.pos[0] < box.images_opening[2][2][0] and \
                 box.images_opening[2][1][1] <= event.pos[1] < box.images_opening[2][2][1]:
             box.close(self.monster, self.hero)
+            self.functions.start_game_attack(self)
         # 选中商店物品
         elif merchant and merchant.store.images[1][1][0] <= event.pos[0] < merchant.store.images[1][2][0] and \
                 merchant.store.images[1][1][1] <= event.pos[1] < merchant.store.images[1][2][1]:
@@ -295,19 +295,21 @@ class Page:  # 定义页面类
         elif merchant and merchant.store.images[2][1][0] <= event.pos[0] < merchant.store.images[2][2][0] and \
                 merchant.store.images[2][1][1] <= event.pos[1] < merchant.store.images[2][2][1]:
             merchant.trading_return(self.monster, self.hero)
+            self.functions.start_game_attack(self)
         # 点击背包物品详情界面的左边
         if self.hero.bag.showing >= 0 and self.hero.bag.show_words[-2][1].topleft[0] <= event.pos[0] < \
                 self.hero.bag.show_words[-2][1].bottomright[0] and self.hero.bag.show_words[-2][1].topleft[1] <= \
                 event.pos[1] < self.hero.bag.show_words[-2][1].bottomright[1]:
             self.hero.bag.showing_click_left(self.setting.screen_width, self.setting.screen_height, box, merchant,
                                              self.hero, self.tip)
-            if not box and not merchant:
-                self.hero.load_equipment()  # 更新英雄持有的武器
+            self.hero.load_weapon()  # 更新英雄持有的武器
         # 点击背包物品详情界面的右边，即退出查看
         elif self.hero.bag.showing >= 0 and self.hero.bag.show_words[-1][1].topleft[0] <= event.pos[0] < \
                 self.hero.bag.show_words[-1][1].bottomright[0] and self.hero.bag.show_words[-1][1].topleft[1] <= \
                 event.pos[1] < self.hero.bag.show_words[-1][1].bottomright[1]:
             self.hero.bag.showing_return(self.monster, self.hero, box, merchant)
+            if not box and not merchant:
+                self.functions.start_game_attack(self)
         # 点击宝箱物品详情界面的左边，即拾取物品
         elif box and box.showing >= 0 and box.show_words[-2][1].topleft[0] <= event.pos[0] < \
                 box.show_words[-2][1].bottomright[0] and box.show_words[-2][1].topleft[1] <= \
@@ -331,8 +333,12 @@ class Page:  # 定义页面类
 
     def mouse_button_down_page5(self, event):  # 页面编号为5时鼠标按下
         if self.images[2][1][0] <= event.pos[0] < self.images[2][2][0] and self.images[2][1][1] <= event.pos[1] < \
-                self.images[2][2][1]:  # 退出游戏设置界面，返回游戏主菜单
-            self.update_page_type(0)
+                self.images[2][2][1]:  # 退出游戏设置界面
+            if self.pausing:
+                self.update_page_type(4)  # 从游戏暂停界面返回游戏界面
+                self.functions.start_game_attack(self)
+            else:
+                self.update_page_type(0)  # 返回主菜单
         elif self.images[8][1][0] <= event.pos[0] < self.images[8][2][0] and self.images[8][1][1] <= event.pos[1] < \
                 self.images[8][2][1]:  # 改变游戏音乐开关状态
             self.setting.music = self.functions.change_music_state(self, 8, self.setting.music)
@@ -346,6 +352,11 @@ class Page:  # 定义页面类
         elif self.images[6][1][0] <= event.pos[0] < self.images[6][2][0] and self.images[7][1][1] <= event.pos[1] < \
                 self.images[7][2][1]:
             self.functions.change_volume_instant(self, event)  # 修改游戏音量
+        elif len(self.images) == 11 and self.images[10][1][0] <= event.pos[0] < self.images[10][2][0] and \
+                self.images[10][1][1] <= event.pos[1] < self.images[10][2][1]:
+            self.functions.save_progress(self, 0)
+            self.update_page_type(0)
+            pass
 
     def mouse_button_down_page6(self, event):  # 页面编号为6时鼠标按下
         if self.images[5][1][0] <= event.pos[0] < self.images[5][2][0] and self.images[5][1][1] <= event.pos[1] < \
@@ -403,6 +414,7 @@ class Page:  # 定义页面类
             box.move_end(self.hero.bag)  # 移动宝箱物品结束
         if self.hero.bag.showing_enable:
             self.hero.bag.explain(self.setting.screen_width, self.setting.screen_height, box, merchant)  # 展示背包物品详细信息
+            self.functions.pause_game_attack(self)
         elif self.hero.bag.selecting_num_moving:
             self.hero.bag.change_selecting_num_moving(pos[0], 1)  # 结束通过拖动刻度改变选中背包物品数量
         elif box and box.showing_enable:
@@ -413,20 +425,18 @@ class Page:  # 定义页面类
     def mouse_button_up_page5(self):  # 页面编号为5时鼠标松开
         if self.setting.volume_hold:
             self.setting.volume_hold = 0
-            with open(os.path.join('page', 'page5', 'images.json'), 'r') as f:  # 读取音量图像信息
+            with open(os.path.join('page', 'page5', 'images.json'), 'r', encoding='utf-8') as f:  # 读取音量图像信息
                 data = json.load(f)
             data[7][1][0] = self.images[7][1][0] / self.setting.screen_width
-            with open(os.path.join('page', 'page5', 'images.json'), "w") as f:  # 将最终效果保存至文件
-                json.dump(data, f)
+            with open(os.path.join('page', 'page5', 'images.json'), "w", encoding='utf-8') as f:  # 将最终效果保存至文件
+                json.dump(data, f, ensure_ascii=False)
 
     def mousewheel_page(self, event):  # 鼠标滚轮滚动
         if self.page_kind == 4:
             self.mousewheel_page4(event)
 
-    def mousewheel_page4(self, event):  # 页面编号为4时鼠标滚轮滚动
-        # 检测当前宝箱以及商人状态
-        box, merchant = self.functions.box_merchant_check(self.box, self.merchant)
-        if self.hero.bag.showing >= 0 or box or merchant:
+    def mousewheel_page4(self, event):  # 页面编号为4时鼠标滚轮滚动)
+        if self.pausing:
             return
         if event.y > 0:
             self.hero.change_weapon(-1)
@@ -441,7 +451,7 @@ class Page:  # 定义页面类
         pass  # 需完善其他页面
 
     def key_down_page2(self, event):  # 页面编号为2时键盘按下
-        with open(os.path.join('page', 'page2', 'words.json'), "r") as f:  # 加载文字属性
+        with open(os.path.join('page', 'page2', 'words.json'), "r", encoding='utf-8') as f:  # 加载文字属性
             data = json.load(f)
         self.functions.enter_archival_name(self, event, 0, data)  # 从键盘读取新存档名字
 
@@ -455,11 +465,13 @@ class Page:  # 定义页面类
             # 检测是否打开宝箱
             for box in self.box:
                 if box.open_enable:
+                    self.functions.pause_game_attack(self)
                     box.opening = 1
                     return  # 打开宝箱后直接结束该函数，防止同时打开多个宝箱或与商人进行交易（即宝箱优先级最高，下面类似）
             # 检测是否打开商店
             for merchant in self.merchant:
                 if merchant.trade_enable:
+                    self.functions.pause_game_attack(self)
                     merchant.trading = 1
                     return
             for npc in self.npc:
